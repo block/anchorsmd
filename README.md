@@ -1,36 +1,88 @@
-# $PROJECT_NAME README
+# ANCHORS
 
-Congrats, project leads! You got a new project to grow!
+Requirements-driven development for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
-This stub is meant to help you form a strong community around your work. It's yours to adapt, and may 
-diverge from this initial structure. Just keep the files seeded in this repo, and the rest is yours to evolve! 
+ANCHORS is a Claude Code skill that keeps product requirements, engineering requirements, testing strategy, and implementation in a consistent, traceable hierarchy — plain markdown files, no build tooling.
 
-## Introduction
+## Install
 
-Orient users to the project here. This is a good place to start with an assumption
-that the user knows very little - so start with the Big Picture and show how this
-project fits into it.
+```bash
+./install.sh
+```
 
-Then maybe a dive into what this project does.
+This symlinks `skill/` to `~/.claude/skills/anchors/` so the skill stays in sync with the repo.
 
-Diagrams and other visuals are helpful here. Perhaps code snippets showing usage.
+## Usage
 
-Project leads should complete, alongside this `README`:
+```
+/anchors init           # Scaffold ANCHORS documents in a directory
+/anchors init path/to   # Scaffold in a specific directory
+/anchors audit          # Audit traceability across all modules
+/anchors                # Interactive — choose init or audit
+```
 
-* [CODEOWNERS](./CODEOWNERS) - set project lead(s)
-* [CONTRIBUTING.md](./CONTRIBUTING.md) - Fill out how to: install prereqs, build, test, run, access CI, chat, discuss, file issues
-* [Bug-report.md](.github/ISSUE_TEMPLATE/bug-report.md) - Fill out `Assignees` add codeowners @names
-* [config.yml](.github/ISSUE_TEMPLATE/config.yml) - remove "(/add your discord channel..)" and replace the url with your Discord channel if applicable
+### Init
 
-The other files in this template repo may be used as-is:
+Creates five files in the target directory:
 
-* [GOVERNANCE.md](./GOVERNANCE.md)
-* [LICENSE](./LICENSE)
+| File | Purpose |
+|------|---------|
+| `ANCHORS.md` | Module marker with `prefix` in frontmatter |
+| `PRODUCT.md` | Product requirements (source of truth) |
+| `ERD.md` | Engineering requirements (derived from PRD) |
+| `TESTING.md` | Testing strategy and coverage mapping |
+| `DEPENDENCIES.md` | External dependencies |
 
-## Project Resources
+### Audit
 
-| Resource                                   | Description                                                                    |
-| ------------------------------------------ | ------------------------------------------------------------------------------ |
-| [CODEOWNERS](./CODEOWNERS)                 | Outlines the project lead(s)                                                   |
-| [GOVERNANCE.md](./GOVERNANCE.md)           | Project governance                                                             |
-| [LICENSE](./LICENSE)                       | Apache License, Version 2.0                                                    |
+Checks traceability across all modules in the repo:
+
+- Every `E-*` requirement has a `←` backlink to a `P-*` requirement
+- Every `P-*` requirement is covered by at least one `E-*`
+- Requirement IDs in code and tests are tracked
+- Stale code references to removed requirements are flagged
+- Cross-module references resolve to real files and anchors
+- Unresolved `OPEN-*` questions are listed
+
+## How it works
+
+ANCHORS defines a truth hierarchy:
+
+```
+PRODUCT.md        ← source of truth (what)
+  → ERD.md        ← technical design (how), must satisfy PRD
+    → Tests       ← executable spec, truthier than implementation
+      → Code      ← must satisfy everything above
+```
+
+When things disagree, higher-authority documents win. Every `E-*` requirement links back to the `P-*` it satisfies. The audit verifies these links are complete and consistent.
+
+## Repo structure
+
+```
+skill/
+  SKILL.md              # The skill definition (Claude Code interprets this)
+  templates/            # Document templates used by /anchors init
+install.sh              # Symlinks skill/ into ~/.claude/skills/
+test/
+  run.sh                # Test runner
+  helpers.sh            # Assertion library
+  test_*.sh             # Test suite (10 files, ~290 assertions)
+testdata/
+  fixtures/             # Fixture repos for testing
+PRODUCT.md              # ANCHORS' own product requirements
+ERD.md                  # ANCHORS' own engineering requirements
+TESTING.md              # ANCHORS' own testing strategy
+```
+
+## Testing
+
+```bash
+./test/run.sh
+```
+
+The test suite validates that the skill definition is complete and consistent — it checks SKILL.md contains every required algorithm, verifies document formats against fixtures, and runs structural checks on the repo's own ANCHORS documents. See [TESTING.md](TESTING.md) for the full strategy.
+
+## Monorepo support
+
+Any directory with an `ANCHORS.md` file is a module. Modules can nest arbitrarily and cross-reference each other with relative paths. Each module declares a unique prefix (e.g., `AUTH`, `PAY`) that scopes its requirement IDs.
