@@ -1,10 +1,12 @@
 # ANCHORS
 
-Requirements-driven development for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+Requirements-driven development for AI agents.
 
-ANCHORS is a Claude Code skill that keeps product requirements, engineering requirements, testing strategy, and implementation in a consistent, traceable hierarchy — plain markdown files, no build tooling.
+ANCHORS keeps product requirements, engineering requirements, testing strategy, and implementation in a consistent, traceable hierarchy — plain markdown files, no build tooling. It gives agents a structured context for understanding what to build, how to build it, and how to verify it.
 
-## Install
+The framework is agent-agnostic: the documents are plain markdown that any agent can read. The `/anchors` skill automates scaffolding and auditing for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), but the documents work without it.
+
+## Install (Claude Code)
 
 ```bash
 ./install.sh
@@ -14,12 +16,16 @@ This symlinks `skill/` to `~/.claude/skills/anchors/` so the skill stays in sync
 
 ## Usage
 
+With the Claude Code skill installed:
+
 ```
 /anchors init           # Scaffold ANCHORS documents in a directory
 /anchors init path/to   # Scaffold in a specific directory
 /anchors audit          # Audit traceability across all modules
 /anchors                # Interactive — choose init or audit
 ```
+
+Without the skill, create the documents manually — see the templates in `skill/templates/`.
 
 ### Init
 
@@ -61,7 +67,7 @@ When things disagree, higher-authority documents win. Every `E-*` requirement li
 
 ```
 skill/
-  SKILL.md              # The skill definition (Claude Code interprets this)
+  SKILL.md              # The skill definition (Claude Code skill)
   templates/            # Document templates used by /anchors init
 install.sh              # Symlinks skill/ into ~/.claude/skills/
 test/
