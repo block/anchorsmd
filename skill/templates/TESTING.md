@@ -5,7 +5,7 @@ see-also:
   - ERD.md — technical requirements and interfaces under test.
 ---
 
-# Automated Testing Strategy
+# [Project Name]: Testing Strategy
 
 ## Source of Truth Hierarchy
 

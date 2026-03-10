@@ -2,8 +2,9 @@
 name: anchors
 description: >
   Requirements-driven development framework. Use when scaffolding product/engineering
-  requirements documents, auditing traceability between requirements and code, or
-  checking document consistency.
+  requirements documents, auditing traceability between requirements and code,
+  checking document consistency, or working on code in a repo that contains ANCHORS.md
+  files (load the skill to understand the requirements context before making changes).
 ---
 
 # anchors
@@ -203,40 +204,20 @@ Scaffold the ANCHORS document set in a directory.
 
 5. Copy the four templates into the target directory, replacing `[Project Name]` with the project name.
 
-6. Check whether a parent directory (up to the repo root) already contains an `ANCHORS.md`. If not, this is the first module in the repo — append the ANCHORS section to `CLAUDE.md` at the repo root (create if it doesn't exist):
+6. Check whether a parent directory (up to the repo root) already contains an `ANCHORS.md`. If not, this is the first module in the repo — append the ANCHORS section to the agent instructions file at the repo root:
 
    ```markdown
-   ## Requirements-Driven Development (ANCHORS)
+   ## ANCHORS
 
-   This repo uses ANCHORS. Modules are marked by `ANCHORS.md` files with a `prefix` declaration.
-
-   ### Document hierarchy (highest to lowest authority)
-   1. PRODUCT.md — defines correct behavior (source of truth)
-   2. ERD.md — technical requirements (must satisfy PRD, links back via ← P-*)
-   3. TESTING.md — testing strategy (covers PRD and ERD, defines how requirements are verified)
-   4. DEPENDENCIES.md — external prerequisites (what the environment must provide)
-   5. Tests — executable specification (truthier than implementation)
-   6. Implementation — must satisfy all of the above
-
-   ### When things disagree
-   - Implementation vs tests → fix implementation
-   - Tests vs documents → fix tests (or update documents first if the requirement changed)
-   - TESTING.md vs PRD/ERD → fix TESTING.md
-   - ERD vs PRD → fix ERD
-   - DEPENDENCIES.md vs ERD → check which is correct
-
-   ### When changing requirements
-   - Update PRODUCT.md first, then ERD.md, then TESTING.md, then tests, then implementation
-   - Never add ERD requirements that contradict the PRD without updating the PRD first
-
-   ### Code traceability
-   - Tag functions implementing requirements: `// E-AUTH-SESSION: description`
-   - Tag test functions with the requirements they verify
-   - One tag per function, not per line. Augment comments, never replace.
-
-   ### Auditing
-   Use `/anchors audit` to check traceability across documents, code, and tests.
+   This repo uses ANCHORS for requirements-driven development. Always load the anchors skill (`/anchors`) before making changes.
    ```
+
+   **Which file(s) to update:**
+   - Check for `AGENTS.md` and `CLAUDE.md` at the repo root.
+   - If one is a symlink to the other, update the real file (resolve symlinks first).
+   - If both exist and are separate files (not symlinked to each other), append the section to both.
+   - If only one exists, append to that one.
+   - If neither exists, create `AGENTS.md`.
 
 7. If there is an existing `ANCHORS.md` in a parent, verify the new prefix is unique across all `**/ANCHORS.md` files in the repo.
 
