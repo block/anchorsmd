@@ -4,19 +4,25 @@ Requirements-driven development for AI agents.
 
 ANCHORS keeps product requirements, engineering requirements, testing strategy, and implementation in a consistent, traceable hierarchy — plain markdown files, no build tooling. It gives agents a structured context for understanding what to build, how to build it, and how to verify it.
 
-The framework is agent-agnostic: the documents are plain markdown that any agent can read. The `/anchors` skill automates scaffolding and auditing for [Claude Code](https://docs.anthropic.com/en/docs/claude-code), but the documents work without it.
+The framework is agent-agnostic: the documents are plain markdown that any agent can read. The `/anchors` skill automates scaffolding and auditing for agents with skills support (Claude Code, Amp, Codex, etc.), but the documents work without it.
 
-## Install (Claude Code)
+## Install
 
 ```bash
 ./install.sh
 ```
 
-This symlinks `skill/` to `~/.claude/skills/anchors/` so the skill stays in sync with the repo.
+The installer prompts for which agent (Claude Code, Amp, or Codex) and whether to install user-level or project-level. It copies the skill to the appropriate location:
+
+| Agent | User-level | Project-level |
+|-------|-----------|---------------|
+| Claude Code | `~/.claude/skills/anchors/` | `.claude/skills/anchors/` |
+| Amp | `~/.config/agents/skills/anchors/` | `.agents/skills/anchors/` |
+| Codex | `~/.codex/skills/anchors/` | `.agents/skills/anchors/` |
 
 ## Usage
 
-With the Claude Code skill installed:
+With the skill installed:
 
 ```
 /anchors init           # Scaffold ANCHORS documents in a directory
@@ -62,32 +68,6 @@ PRODUCT.md        ← source of truth (what)
 ```
 
 When things disagree, higher-authority documents win. Every `E-*` requirement links back to the `P-*` it satisfies. The audit verifies these links are complete and consistent.
-
-## Repo structure
-
-```
-skill/
-  SKILL.md              # The skill definition (Claude Code skill)
-  templates/            # Document templates used by /anchors init
-install.sh              # Symlinks skill/ into ~/.claude/skills/
-test/
-  run.sh                # Test runner
-  helpers.sh            # Assertion library
-  test_*.sh             # Test suite (10 files, ~290 assertions)
-testdata/
-  fixtures/             # Fixture repos for testing
-PRODUCT.md              # ANCHORS' own product requirements
-ERD.md                  # ANCHORS' own engineering requirements
-TESTING.md              # ANCHORS' own testing strategy
-```
-
-## Testing
-
-```bash
-./test/run.sh
-```
-
-The test suite validates that the skill definition is complete and consistent — it checks SKILL.md contains every required algorithm, verifies document formats against fixtures, and runs structural checks on the repo's own ANCHORS documents. See [TESTING.md](TESTING.md) for the full strategy.
 
 ## Monorepo support
 
