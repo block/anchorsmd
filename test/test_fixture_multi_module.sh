@@ -1,7 +1,8 @@
 #!/bin/bash
 # Layer 2: Integration — Multi-module fixture
 # Tests: E-ANCHORS-MONO-MODULE-DETECTION, E-ANCHORS-AUDIT-PREFIX-COLLISION,
-#        E-ANCHORS-AUDIT-CROSS-RESOLVE
+#        E-ANCHORS-AUDIT-CROSS-RESOLVE, E-ANCHORS-MONO-RELATIVE-PATHS,
+#        E-ANCHORS-MONO-PARTIAL-MODULES
 # Validates TESTING.md §2.5: cross-module references
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"
@@ -78,6 +79,40 @@ if grep -q 'P-BRKA-THING' "$BROKEN/moduleA/PRODUCT.md"; then
   echo "    ✓ Valid cross-ref P-BRKA-THING exists in moduleA"
 else
   echo "    ✗ P-BRKA-THING should exist in moduleA/PRODUCT.md"
+  inc_fail
+fi
+
+echo "  [2.5.5] E-ANCHORS-MONO-RELATIVE-PATHS: Cross-module refs use relative paths"
+# The backlink in payments/ERD.md should use a relative path to ../auth/PRODUCT.md
+assert_grep "Cross-ref uses relative path" '\.\./auth/PRODUCT\.md#P-MAUTH-LOGIN' "$FIXTURE/payments/ERD.md"
+# Verify it's in a backlink context (← [...](relative path))
+assert_grep "Cross-ref uses ← backlink format" '← \[P-MAUTH-LOGIN\]\(\.\./auth/PRODUCT\.md#P-MAUTH-LOGIN\)' "$FIXTURE/payments/ERD.md"
+
+echo "  [2.5.6] E-ANCHORS-MONO-PARTIAL-MODULES: Modules without all 4 docs are valid"
+# auth module has only PRODUCT.md and ERD.md (no TESTING.md, no DEPENDENCIES.md)
+assert_file_exists "auth has ANCHORS.md" "$FIXTURE/auth/ANCHORS.md"
+assert_file_exists "auth has PRODUCT.md" "$FIXTURE/auth/PRODUCT.md"
+assert_file_exists "auth has ERD.md" "$FIXTURE/auth/ERD.md"
+inc_test
+if [[ ! -f "$FIXTURE/auth/TESTING.md" ]]; then
+  echo "    ✓ auth module has no TESTING.md (partial module, valid)"
+else
+  echo "    ✗ auth should not have TESTING.md for this test"
+  inc_fail
+fi
+inc_test
+if [[ ! -f "$FIXTURE/auth/DEPENDENCIES.md" ]]; then
+  echo "    ✓ auth module has no DEPENDENCIES.md (partial module, valid)"
+else
+  echo "    ✗ auth should not have DEPENDENCIES.md for this test"
+  inc_fail
+fi
+# payments module also partial — only PRODUCT.md and ERD.md
+inc_test
+if [[ ! -f "$FIXTURE/payments/TESTING.md" ]]; then
+  echo "    ✓ payments module has no TESTING.md (partial module, valid)"
+else
+  echo "    ✗ payments should not have TESTING.md for this test"
   inc_fail
 fi
 

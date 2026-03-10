@@ -69,7 +69,6 @@ ANCHORS is implemented entirely as a Claude Code skill — a markdown instructio
 
 - <a id="E-ANCHORS-INIT-CLAUDE-MD-APPEND"></a>**E-ANCHORS-INIT-CLAUDE-MD-APPEND**: When no parent directory (up to repo root) contains `ANCHORS.md`, append a minimal ANCHORS section to the agent instructions file at the repo root. Resolution: check for `AGENTS.md` and `CLAUDE.md`; if one symlinks to the other, update the real file; if both exist as separate files, update both; if only one exists, update it; if neither exists, create `AGENTS.md`. The section instructs Claude to load the anchors skill — it does not duplicate the framework rules already in the skill.
   ← [P-ANCHORS-INIT-CLAUDE-MD](PRODUCT.md#P-ANCHORS-INIT-CLAUDE-MD)
-  ← [P-ANCHORS-INIT-CLAUDE-MD](PRODUCT.md#P-ANCHORS-INIT-CLAUDE-MD)
 
 - <a id="E-ANCHORS-INIT-PREFIX-UNIQUE"></a>**E-ANCHORS-INIT-PREFIX-UNIQUE**: After the user chooses a prefix, glob for all `**/ANCHORS.md` files in the repo (excluding `node_modules`, `vendor`, `.git`, build output), read their `prefix` fields, and reject duplicates.
   ← [P-ANCHORS-INIT-UNIQUE-PREFIX](PRODUCT.md#P-ANCHORS-INIT-UNIQUE-PREFIX)

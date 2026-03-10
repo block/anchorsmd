@@ -15,6 +15,22 @@ see-also:
 
 ---
 
+## How We Test an LLM Skill
+
+ANCHORS can't be tested like normal software. The "implementation" is a markdown file that an LLM interprets at runtime — there's no function to call, no binary to execute. We can't invoke the skill in tests without spinning up a Claude session, which would be slow, expensive, and non-deterministic.
+
+Instead, we test what we *can* verify statically:
+
+1. **Are the instructions complete?** We grep SKILL.md for every algorithm, rule, and format the ERD requires. If the ERD says "5 disagreement rules," we verify SKILL.md contains all 5. This catches drift between requirements and instructions.
+
+2. **Do the document formats work?** We build fixture repos with known states — complete modules, deliberate gaps, broken cross-refs — and run the audit *logic* (as shell scripts) against them. This validates that the formats are parseable and the audit rules are coherent.
+
+3. **Is the repo self-consistent?** We run structural checks against the ANCHORS repo's own documents: backlinks resolve, PRD coverage is complete, frontmatter is valid.
+
+The shell tests validate properties of the documents and instructions. They don't replace the full `/anchors audit` (which requires an LLM to execute), but they catch the bugs that matter most: missing rules, stale instructions, format mismatches, and fixture correctness.
+
+---
+
 ## Coverage Invariants
 
 ### Invariant 1: Every product and engineering requirement has a test
@@ -52,12 +68,12 @@ The production implementation is `SKILL.md` executed by Claude Code. Template fi
 
 | Functional Area | Primary Layer | Secondary Layer |
 |-----------------|---------------|-----------------|
-| **Document format** (P-ANCHORS-DOC-SET, E-ANCHORS-*-FORMAT) | Unit (template validation) | Integration (init + audit round-trip) |
-| **Truth hierarchy** (P-ANCHORS-TRUTH-HIERARCHY, P-ANCHORS-DISAGREEMENT) | Specification (documented in SKILL.md) | Self-audit (audit the ANCHORS repo itself) |
-| **Init workflow** (P-ANCHORS-INIT-*) | Integration (run init on fixture dirs) | E2E (full init in empty repo) |
-| **Audit workflow** (P-ANCHORS-AUDIT-*) | Integration (run audit on fixture repos) | E2E (audit a real multi-module repo) |
+| **Document format** (P-ANCHORS-DOC-SET, E-ANCHORS-*-FORMAT) | Unit (template validation) | Integration (fixture format checks) |
+| **Truth hierarchy** (P-ANCHORS-TRUTH-HIERARCHY, P-ANCHORS-DISAGREEMENT) | Static (verify SKILL.md contains all rules) | Self-audit (audit the ANCHORS repo itself) |
+| **Init workflow** (P-ANCHORS-INIT-*) | Static (verify SKILL.md describes all steps) | E2E (full init in empty repo, manual) |
+| **Audit workflow** (P-ANCHORS-AUDIT-*) | Integration (audit logic on fixtures) | E2E (full `/anchors audit`, manual) |
 | **Monorepo support** (P-ANCHORS-MONO-*) | Integration (multi-module fixture repo) | E2E (audit with cross-module refs) |
-| **Routing** (P-ANCHORS-ROUTE-*) | Unit (argument parsing) | Integration (interactive prompts) |
+| **Routing** (P-ANCHORS-ROUTE-*) | Static (verify SKILL.md routing table) | E2E (interactive prompts, manual) |
 
 ---
 
@@ -67,14 +83,14 @@ ANCHORS is unusual: it's a skill definition (instructions) plus templates, not c
 
 ```
                     ┌─────────┐
-                    │  E2E    │   Full /anchors invocations in real repos
+                    │  E2E    │   Full /anchors invocations (manual, LLM-driven)
                     │         │
                 ┌───┴─────────┴───┐
-                │  Integration    │   Init/audit on fixture repos
-                │  (primary)      │   Template validation
+                │  Integration    │   Fixture-based structural checks
+                │  (primary)      │   Self-audit, code traceability
         ┌───────┴─────────────────┴───────┐
         │         Unit / Static           │   Template syntax checks
-        │  (frontmatter, placeholder IDs) │   SKILL.md consistency
+        │  (frontmatter, placeholder IDs) │   SKILL.md completeness
         └─────────────────────────────────┘
 ```
 
@@ -82,7 +98,7 @@ ANCHORS is unusual: it's a skill definition (instructions) plus templates, not c
 
 ## Layer 1: Unit / Static Validation
 
-### 1.1 Template Integrity
+### 1.1 Template Integrity (`test_template_integrity.sh`)
 
 | Test Area | What to Test |
 |-----------|-------------|
@@ -91,13 +107,36 @@ ANCHORS is unusual: it's a skill definition (instructions) plus templates, not c
 | **Anchor examples** | Example anchors in templates use the documented format (`<a id="..."></a>**...**:`) |
 | **No stale IDs** | Templates don't contain requirement IDs that look real (only example/placeholder IDs) |
 
-### 1.2 SKILL.md Consistency
+### 1.2 SKILL.md Consistency (`test_skill_consistency.sh`)
 
 | Test Area | What to Test |
 |-----------|-------------|
 | **Mode table** | The routing table in SKILL.md matches the documented modes in PRODUCT.md |
 | **Template paths** | Template paths referenced in SKILL.md match actual files in `templates/` |
 | **Report format** | The example audit report in SKILL.md includes all gap categories from E-ANCHORS-AUDIT-REPORT-FORMAT |
+
+### 1.3 SKILL.md Algorithm Completeness (`test_skill_algorithms.sh`)
+
+| Test Area | What to Test |
+|-----------|-------------|
+| **Truth hierarchy** | SKILL.md documents the full hierarchy order (E-ANCHORS-HIERARCHY-ORDER) |
+| **Disagreement rules** | All 5 disagreement resolution rules present (E-ANCHORS-DISAGREE-RULES) |
+| **Code tag format** | Tag format, one-per-function rule, augment-not-replace (E-ANCHORS-CODE-TAG-FORMAT) |
+| **Init path resolution** | 3-step algorithm: explicit path, clean CWD, occupied CWD (E-ANCHORS-INIT-PATH-RESOLUTION) |
+| **Init conflict check** | Skip/overwrite options for existing files (E-ANCHORS-INIT-CONFLICT-CHECK) |
+| **Init agent instructions** | AGENTS.md/CLAUDE.md logic with symlink handling (E-ANCHORS-INIT-CLAUDE-MD-APPEND) |
+| **Init defaults** | Directory name as default project name and prefix (E-ANCHORS-INIT-DEFAULTS) |
+| **Audit glob exclusions** | node_modules, vendor, .git excluded from discovery (E-ANCHORS-AUDIT-GLOB) |
+| **Route recommendation** | Audit recommended when modules exist, init when none (E-ANCHORS-ROUTE-RECOMMEND) |
+
+### 1.4 Document Format Validation (`test_document_format.sh`)
+
+| Test Area | What to Test |
+|-----------|-------------|
+| **Document locations** | Documents are siblings of ANCHORS.md in fixture (E-ANCHORS-DOC-LOCATIONS) |
+| **P-ID format** | `<a id="P-..."></a>**P-...**:` pattern in fixtures and templates (E-ANCHORS-P-ID-FORMAT) |
+| **E-ID format** | Same anchor pattern plus ← backlink within 2 lines (E-ANCHORS-E-ID-FORMAT) |
+| **D-DEP format** | Section header `### D-DEP-*` with Used by/Where/Why fields (E-ANCHORS-DEP-ID-FORMAT) |
 
 ---
 
@@ -114,6 +153,8 @@ ANCHORS is unusual: it's a skill definition (instructions) plus templates, not c
 | **Name substitution** | `[Project Name]` replaced in all templates |
 | **Agent instructions append** | ANCHORS section appended to repo-root `AGENTS.md`/`CLAUDE.md` (handles symlinks, both files, or creates `AGENTS.md`) |
 
+*Note: Init tests describe expected behavior but cannot be run automatically — they require an LLM session to execute `/anchors init`.*
+
 ### 2.2 Init with Existing Files
 
 **Setup:** Directory with some ANCHORS files already present.
@@ -124,9 +165,9 @@ ANCHORS is unusual: it's a skill definition (instructions) plus templates, not c
 | **Overwrite all** | All files replaced with fresh templates |
 | **Prefix collision** | Duplicate prefix across modules is rejected |
 
-### 2.3 Audit on Well-Formed Repo
+### 2.3 Audit on Well-Formed Repo (`test_fixture_complete.sh`)
 
-**Setup:** Fixture repo with complete ANCHORS module(s), code files with traceability tags, test files with requirement refs.
+**Setup:** `testdata/fixtures/complete-module/` — a module with all 4 documents, 3 P-* requirements, 3 E-* requirements with full backlinks, D-DEP entries, plus source and test files with traceability tags.
 
 | Test Area | What to Test |
 |-----------|-------------|
@@ -136,32 +177,68 @@ ANCHORS is unusual: it's a skill definition (instructions) plus templates, not c
 | **Code traceability** | Requirement refs in code and tests correctly classified |
 | **Report completeness** | Report includes all sections with correct counts |
 
-### 2.4 Audit on Repo with Gaps
+### 2.4 Audit on Repo with Gaps (`test_fixture_gaps.sh`)
 
-**Setup:** Fixture repo with deliberate gaps — missing backlinks, orphan P-* requirements, stale code refs, missing test refs, open questions, prefix collisions.
+**Setup:** `testdata/fixtures/gaps-module/` — a module with deliberate gaps: E-PAY-IDEMPOTENT has no backlink, P-PAY-CART and P-PAY-RECEIPT have no E-* coverage, `OPEN-REFUND-FLOW` is unresolved, TESTING.md and DEPENDENCIES.md are absent.
 
 | Test Area | What to Test |
 |-----------|-------------|
 | **Missing backlinks** | E-* without ← reported |
 | **Uncovered PRD** | P-* with no E-* coverage reported |
-| **Stale refs** | Code refs to nonexistent IDs reported |
-| **Test gaps** | Requirements in code but not in tests reported |
 | **Open questions** | OPEN-* items listed |
-| **Prefix collision** | Duplicate prefixes flagged as error |
+| **Missing documents** | Absent TESTING.md and DEPENDENCIES.md detected |
 
-### 2.5 Cross-Module References
+### 2.5 Cross-Module References (`test_fixture_multi_module.sh`)
 
-**Setup:** Multi-module fixture repo with cross-module backlinks, some valid and some broken.
+**Setup:** `testdata/fixtures/multi-module/` (valid refs) and `testdata/fixtures/broken-cross-refs/` (broken refs). Two modules with cross-module backlinks using relative paths.
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Valid cross-ref** | Relative path resolves, anchor exists — no error |
+| **Valid cross-ref** | Relative path resolves, anchor exists — no error (E-ANCHORS-AUDIT-CROSS-RESOLVE) |
 | **Broken path** | Relative path to nonexistent file — reported |
 | **Broken anchor** | File exists but anchor ID missing — reported |
+| **Relative path format** | Cross-module refs use `← [P-*](../module/PRODUCT.md#P-*)` (E-ANCHORS-MONO-RELATIVE-PATHS) |
+| **Partial modules** | Modules without all 4 documents are valid (E-ANCHORS-MONO-PARTIAL-MODULES) |
+
+### 2.6 Prefix Collision (`test_fixture_prefix_collision.sh`)
+
+**Setup:** Temp directory with two modules sharing prefix `DUPE`.
+
+| Test Area | What to Test |
+|-----------|-------------|
+| **Collision detected** | Duplicate prefixes flagged |
+| **Valid fixture clean** | Multi-module fixture has no collisions |
+
+### 2.7 Code Traceability (`test_code_traceability.sh`)
+
+**Setup:** `testdata/fixtures/complete-module/src/` and `test/` — Go source files with requirement ID tags, including a deliberate stale reference (E-AUTH-OLD-THING) and a test gap (E-AUTH-JWT in source but not tests).
+
+| Test Area | What to Test |
+|-----------|-------------|
+| **Code search** | Requirement IDs found in source files (E-ANCHORS-AUDIT-CODE-SEARCH) |
+| **File classification** | Source vs test files distinguished by path convention |
+| **Stale refs** | Code refs to IDs not in any document detected (E-ANCHORS-AUDIT-STALE-REFS) |
+| **Test gaps** | Requirements in source but not test files detected (E-ANCHORS-AUDIT-TEST-GAP) |
+
+### 2.8 Self-Audit (`test_self_audit.sh`)
+
+**Setup:** The ANCHORS repo's own documents.
+
+| Test Area | What to Test |
+|-----------|-------------|
+| **Marker format** | ANCHORS.md has prefix field |
+| **Document presence** | PRODUCT.md, ERD.md, TESTING.md exist |
+| **ID extraction** | All P-* and E-* IDs found with HTML anchors |
+| **Backlinks** | Every E-* has ← backlink to P-* |
+| **PRD coverage** | Every P-* referenced by at least one E-* |
+| **Open questions** | No unresolved OPEN-* items |
+| **Frontmatter** | All documents have scope and see-also fields |
 
 ---
 
 ## Layer 3: E2E Tests
+
+These require running the actual `/anchors` skill in a Claude Code session. They are manual — the shell test suite cannot invoke the LLM.
 
 | Test | Scenario |
 |------|----------|
@@ -173,20 +250,37 @@ ANCHORS is unusual: it's a skill definition (instructions) plus templates, not c
 
 ## Test Infrastructure
 
+### Test Runner
+
+`test/run.sh` — runs all `test/test_*.sh` files, reports pass/fail counts. Each test file sources `test/helpers.sh` for assertion utilities (`assert_grep`, `assert_eq`, `assert_file_exists`, etc.). The full suite runs in under a second.
+
+```
+test/run.sh                        # Runner — executes all test_*.sh
+test/helpers.sh                    # Assertion library
+test/test_template_integrity.sh    # Layer 1: template format
+test/test_skill_consistency.sh     # Layer 1: SKILL.md structure
+test/test_skill_algorithms.sh      # Layer 1: SKILL.md algorithm completeness
+test/test_document_format.sh       # Layer 1/2: ID format validation
+test/test_fixture_complete.sh      # Layer 2: well-formed module
+test/test_fixture_gaps.sh          # Layer 2: gap detection
+test/test_fixture_multi_module.sh  # Layer 2: cross-module refs
+test/test_fixture_prefix_collision.sh  # Layer 2: prefix collision
+test/test_code_traceability.sh     # Layer 2: code/test tag detection
+test/test_self_audit.sh            # Layer 2/3: self-consistency
+```
+
 ### Fixture Repos
 
 ```
 testdata/
   fixtures/
-    clean-repo/              # Empty repo for init tests
-    complete-module/          # Well-formed single module
+    complete-module/          # Well-formed single module (4 docs + src + test)
     gaps-module/              # Module with deliberate traceability gaps
     multi-module/             # Two modules with cross-references
     broken-cross-refs/        # Multi-module with broken relative paths
-    existing-files/           # Module with some ANCHORS files pre-existing
 ```
 
-Each fixture is a minimal directory tree with ANCHORS documents and optional source/test files containing traceability tags.
+Each fixture is a minimal directory tree with ANCHORS documents and (where needed) source/test files containing traceability tags. Tests are read-only — they never modify fixtures. The one exception (`test_fixture_prefix_collision.sh`) creates a temp dir and cleans it up with a trap.
 
 ### Self-Audit as Smoke Test
 
@@ -198,9 +292,8 @@ Running `/anchors audit` on this repository is the primary smoke test. The audit
 
 | Tool | Purpose |
 |------|---------|
-| `/anchors audit` | Self-audit — the skill audits its own repo |
-| Manual review | Verify SKILL.md instructions match PRODUCT.md and ERD.md |
-| Fixture-based walkthroughs | Step through init/audit on fixture repos to verify behavior |
+| `test/run.sh` | Automated test suite — static checks, fixture validation, self-audit |
+| `/anchors audit` | Full LLM-driven audit — the E2E smoke test (manual) |
 
 ---
 
@@ -208,9 +301,9 @@ Running `/anchors audit` on this repository is the primary smoke test. The audit
 
 | Layer | Target | Rationale |
 |-------|--------|-----------|
-| Unit/Static | 100% of templates | Templates are the only static artifacts; all must be well-formed |
+| Unit/Static | 100% of templates, 100% of ERD algorithm requirements | Templates are the only static artifacts; SKILL.md must contain every required algorithm |
 | Integration | 100% of audit gap categories | Every type of gap the audit can report must have a fixture that triggers it |
-| E2E | All 3 modes exercised | Interactive, init, and audit must each be run at least once |
+| E2E | All 3 modes exercised | Interactive, init, and audit must each be run at least once (manual) |
 
 ---
 
@@ -220,3 +313,4 @@ Running `/anchors audit` on this repository is the primary smoke test. The audit
 - **Claude Code internals:** We don't test `AskUserQuestion`, `Write`, `Glob`, or other Claude Code tools. We assume they work as documented.
 - **Markdown rendering:** We don't test how documents render in various viewers. We test that the markdown structure is correct.
 - **Performance:** ANCHORS operates on small document sets. There are no performance-sensitive paths.
+- **Init execution:** The init workflow requires LLM interaction (AskUserQuestion prompts, file writes). We verify SKILL.md describes all init steps correctly but cannot execute them in the automated suite.
