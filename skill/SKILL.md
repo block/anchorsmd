@@ -190,11 +190,11 @@ Scaffold the ANCHORS document set in a directory.
    - Header: "Overwrite"
    - Options: **Skip existing** ("Only create missing documents"), **Overwrite all** ("Replace all documents with fresh templates")
 
-2. Read the templates from the skill's installed location:
-   - `~/.claude/skills/anchors/templates/PRODUCT.md`
-   - `~/.claude/skills/anchors/templates/ERD.md`
-   - `~/.claude/skills/anchors/templates/TESTING.md`
-   - `~/.claude/skills/anchors/templates/DEPENDENCIES.md`
+2. Read the templates from the `templates/` directory relative to this skill file (sibling of `SKILL.md`):
+   - `templates/PRODUCT.md`
+   - `templates/ERD.md`
+   - `templates/TESTING.md`
+   - `templates/DEPENDENCIES.md`
 
 3. Use `AskUserQuestion` to ask the user for project details (both in a single call):
    - Question 1: "What is the project/module name?" — Header: "Name" — Options: offer the target directory name as the recommended default, plus 1-2 alternatives derived from parent directories or repo name.
@@ -204,7 +204,11 @@ Scaffold the ANCHORS document set in a directory.
 
 5. Copy the four templates into the target directory, replacing `[Project Name]` with the project name.
 
-6. Check whether a parent directory (up to the repo root) already contains an `ANCHORS.md`. If not, this is the first module in the repo — append the ANCHORS section to the agent instructions file at the repo root:
+6. Check whether a parent directory (up to the repo root) already contains an `ANCHORS.md`. If not, this is the first module in the repo — append the ANCHORS section to the agent instructions file at the repo root.
+
+   **Skip this step** if an `ai-rules/` directory exists at the repo root — ai-rules manages agent instruction files via `ai-rules generate`.
+
+   Otherwise, append:
 
    ```markdown
    ## ANCHORS

@@ -74,6 +74,7 @@ The production implementation is `SKILL.md` executed by Claude Code. Template fi
 | **Audit workflow** (P-ANCHORS-AUDIT-*) | Integration (audit logic on fixtures) | E2E (full `/anchors audit`, manual) |
 | **Monorepo support** (P-ANCHORS-MONO-*) | Integration (multi-module fixture repo) | E2E (audit with cross-module refs) |
 | **Routing** (P-ANCHORS-ROUTE-*) | Static (verify SKILL.md routing table) | E2E (interactive prompts, manual) |
+| **Installer** (P-ANCHORS-INSTALL-*) | Unit (install.sh syntax, structure) | Integration (target dir resolution, ai-rules prereq checks) |
 
 ---
 
@@ -233,6 +234,24 @@ ANCHORS is unusual: it's a skill definition (instructions) plus templates, not c
 | **PRD coverage** | Every P-* referenced by at least one E-* |
 | **Open questions** | No unresolved OPEN-* items |
 | **Frontmatter** | All documents have scope and see-also fields |
+
+### 2.9 Installer (`test_installer.sh`)
+
+**Setup:** The `install.sh` script.
+
+| Test Area | What to Test |
+|-----------|-------------|
+| **Script syntax** | `install.sh` passes `bash -n` syntax check |
+| **Agent menu** | All four agent options present: Claude Code, Amp, Codex, ai-rules (E-ANCHORS-INSTALL-AGENT-MENU) |
+| **Scope menu** | User-level and project-level options present (E-ANCHORS-INSTALL-SCOPE-MENU) |
+| **Target directories** | All six agent-scope combinations resolve to documented paths (E-ANCHORS-INSTALL-TARGET-DIRS) |
+| **ai-rules target** | ai-rules path is `ai-rules/skills/anchors/` (E-ANCHORS-INSTALL-AIRULES-PATH) |
+| **ai-rules CLI check** | Installer checks for `ai-rules` command via `command -v` (E-ANCHORS-INSTALL-AIRULES-CHECKS) |
+| **ai-rules dir check** | Installer checks for `ai-rules/` directory existence (E-ANCHORS-INSTALL-AIRULES-CHECKS) |
+| **ai-rules generate** | Installer runs `ai-rules generate` after copying skill (E-ANCHORS-INSTALL-AIRULES-PATH) |
+| **Agent instructions (direct)** | Project-level installs append ANCHORS section to `AGENTS.md`/`CLAUDE.md` with symlink handling, skip if already present (E-ANCHORS-INSTALL-INSTRUCTIONS-DIRECT) |
+| **Agent instructions (ai-rules)** | ai-rules installs create `ai-rules/anchors.md` rule file, skip if already exists (E-ANCHORS-INSTALL-INSTRUCTIONS-AIRULES) |
+| **Idempotent append** | Re-running installer does not duplicate the ANCHORS section |
 
 ---
 

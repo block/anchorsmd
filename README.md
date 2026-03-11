@@ -12,13 +12,16 @@ The framework is agent-agnostic: the documents are plain markdown that any agent
 ./install.sh
 ```
 
-The installer prompts for which agent (Claude Code, Amp, or Codex) and whether to install user-level or project-level. It copies the skill to the appropriate location:
+The installer prompts for which agent and whether to install user-level or project-level. It copies the skill to the appropriate location:
 
 | Agent | User-level | Project-level |
 |-------|-----------|---------------|
 | Claude Code | `~/.claude/skills/anchors/` | `.claude/skills/anchors/` |
 | Amp | `~/.config/agents/skills/anchors/` | `.agents/skills/anchors/` |
 | Codex | `~/.codex/skills/anchors/` | `.agents/skills/anchors/` |
+| [ai-rules](https://github.com/block/ai-rules) | — | `ai-rules/skills/anchors/` |
+
+For **ai-rules**, the installer copies the skill into `ai-rules/skills/anchors/` and runs `ai-rules generate` to produce agent-specific configuration files. This requires the `ai-rules` CLI and an existing `ai-rules/` directory in your project (`ai-rules init`). ai-rules is always project-level.
 
 ## Usage
 

@@ -61,13 +61,13 @@ ANCHORS is implemented entirely as a Claude Code skill — a markdown instructio
 - <a id="E-ANCHORS-INIT-CONFLICT-CHECK"></a>**E-ANCHORS-INIT-CONFLICT-CHECK**: Before writing, glob the target directory for all five filenames. If any exist, prompt: "Skip existing" (only create missing) or "Overwrite all" (replace everything).
   ← [P-ANCHORS-INIT-EXISTING](PRODUCT.md#P-ANCHORS-INIT-EXISTING)
 
-- <a id="E-ANCHORS-INIT-TEMPLATE-COPY"></a>**E-ANCHORS-INIT-TEMPLATE-COPY**: Templates are read from `~/.claude/skills/anchors/templates/`. The `[Project Name]` placeholder in each template is replaced with the user-provided name. `ANCHORS.md` is generated (not templated) with the chosen prefix in frontmatter.
+- <a id="E-ANCHORS-INIT-TEMPLATE-COPY"></a>**E-ANCHORS-INIT-TEMPLATE-COPY**: Templates are read from the `templates/` directory relative to this skill's installed location (sibling of `SKILL.md`). The `[Project Name]` placeholder in each template is replaced with the user-provided name. `ANCHORS.md` is generated (not templated) with the chosen prefix in frontmatter.
   ← [P-ANCHORS-INIT-SCAFFOLD](PRODUCT.md#P-ANCHORS-INIT-SCAFFOLD)
 
 - <a id="E-ANCHORS-INIT-DEFAULTS"></a>**E-ANCHORS-INIT-DEFAULTS**: The skill suggests the target directory name as the default project name and an uppercase abbreviation as the default prefix (e.g., directory `auth-service` → name "auth-service", prefix "AUTH").
   ← [P-ANCHORS-INIT-PREFIX](PRODUCT.md#P-ANCHORS-INIT-PREFIX)
 
-- <a id="E-ANCHORS-INIT-CLAUDE-MD-APPEND"></a>**E-ANCHORS-INIT-CLAUDE-MD-APPEND**: When no parent directory (up to repo root) contains `ANCHORS.md`, append a minimal ANCHORS section to the agent instructions file at the repo root. Resolution: check for `AGENTS.md` and `CLAUDE.md`; if one symlinks to the other, update the real file; if both exist as separate files, update both; if only one exists, update it; if neither exists, create `AGENTS.md`. The section instructs Claude to load the anchors skill — it does not duplicate the framework rules already in the skill.
+- <a id="E-ANCHORS-INIT-CLAUDE-MD-APPEND"></a>**E-ANCHORS-INIT-CLAUDE-MD-APPEND**: When no parent directory (up to repo root) contains `ANCHORS.md`, append a minimal ANCHORS section to the agent instructions file at the repo root. Resolution: check for `AGENTS.md` and `CLAUDE.md`; if one symlinks to the other, update the real file; if both exist as separate files, update both; if only one exists, update it; if neither exists, create `AGENTS.md`. The section instructs the agent to load the anchors skill — it does not duplicate the framework rules already in the skill. If an `ai-rules/` directory exists at the repo root, skip this step entirely — ai-rules manages those files via `ai-rules generate`.
   ← [P-ANCHORS-INIT-CLAUDE-MD](PRODUCT.md#P-ANCHORS-INIT-CLAUDE-MD)
 
 - <a id="E-ANCHORS-INIT-PREFIX-UNIQUE"></a>**E-ANCHORS-INIT-PREFIX-UNIQUE**: After the user chooses a prefix, glob for all `**/ANCHORS.md` files in the repo (excluding `node_modules`, `vendor`, `.git`, build output), read their `prefix` fields, and reject duplicates.
@@ -135,6 +135,34 @@ ANCHORS is implemented entirely as a Claude Code skill — a markdown instructio
 
 - <a id="E-ANCHORS-ROUTE-RECOMMEND"></a>**E-ANCHORS-ROUTE-RECOMMEND**: In interactive mode, if any `**/ANCHORS.md` exists in the repo, recommend Audit first. If none exist, recommend Init first. Use `AskUserQuestion` with two options.
   ← [P-ANCHORS-ROUTE-INTERACTIVE](PRODUCT.md#P-ANCHORS-ROUTE-INTERACTIVE)
+
+---
+
+## 8. Installer
+
+- <a id="E-ANCHORS-INSTALL-AGENT-MENU"></a>**E-ANCHORS-INSTALL-AGENT-MENU**: The installer presents a numbered menu of supported agents: (1) Claude Code, (2) Amp, (3) Codex, (4) ai-rules. Invalid selections exit with an error.
+  ← [P-ANCHORS-INSTALL-AGENTS](PRODUCT.md#P-ANCHORS-INSTALL-AGENTS)
+
+- <a id="E-ANCHORS-INSTALL-SCOPE-MENU"></a>**E-ANCHORS-INSTALL-SCOPE-MENU**: For Claude Code, Amp, and Codex, the installer prompts for scope: (1) User-level, (2) Project-level. The ai-rules path skips this prompt (always project-level).
+  ← [P-ANCHORS-INSTALL-SCOPE](PRODUCT.md#P-ANCHORS-INSTALL-SCOPE)
+
+- <a id="E-ANCHORS-INSTALL-TARGET-DIRS"></a>**E-ANCHORS-INSTALL-TARGET-DIRS**: Target directory resolution maps agent and scope to a path: Claude Code user → `~/.claude/skills/anchors/`, Claude Code project → `.claude/skills/anchors/`, Amp user → `~/.config/agents/skills/anchors/`, Amp project → `.agents/skills/anchors/`, Codex user → `~/.codex/skills/anchors/`, Codex project → `.agents/skills/anchors/`.
+  ← [P-ANCHORS-INSTALL-COPY](PRODUCT.md#P-ANCHORS-INSTALL-COPY)
+
+- <a id="E-ANCHORS-INSTALL-REPLACE"></a>**E-ANCHORS-INSTALL-REPLACE**: Before copying, the installer removes any existing file, symlink, or directory at the target path. It creates parent directories as needed and copies the entire `skill/` directory.
+  ← [P-ANCHORS-INSTALL-COPY](PRODUCT.md#P-ANCHORS-INSTALL-COPY)
+
+- <a id="E-ANCHORS-INSTALL-AIRULES-PATH"></a>**E-ANCHORS-INSTALL-AIRULES-PATH**: For ai-rules, the target directory is `ai-rules/skills/anchors/`. After copying the skill, the installer runs `ai-rules generate` to regenerate all agent-specific output files from the ai-rules source tree.
+  ← [P-ANCHORS-INSTALL-AIRULES](PRODUCT.md#P-ANCHORS-INSTALL-AIRULES)
+
+- <a id="E-ANCHORS-INSTALL-AIRULES-CHECKS"></a>**E-ANCHORS-INSTALL-AIRULES-CHECKS**: Before proceeding with ai-rules installation, the installer checks: (1) `ai-rules` command is available on PATH via `command -v`, (2) an `ai-rules/` directory exists in the current working directory. Each failed check exits with a descriptive error message and remediation instructions.
+  ← [P-ANCHORS-INSTALL-AIRULES-PREREQS](PRODUCT.md#P-ANCHORS-INSTALL-AIRULES-PREREQS)
+
+- <a id="E-ANCHORS-INSTALL-INSTRUCTIONS-DIRECT"></a>**E-ANCHORS-INSTALL-INSTRUCTIONS-DIRECT**: For project-level installs of Claude Code, Amp, or Codex, the installer appends an ANCHORS section to the agent instructions file at the repo root. Uses the same resolution logic as init step 6: check for `AGENTS.md` and `CLAUDE.md`; if one symlinks to the other, update the real file; if both exist as separate files, update both; if only one exists, update it; if neither exists, create `AGENTS.md`. Skips if the file already contains an ANCHORS section.
+  ← [P-ANCHORS-INSTALL-AGENT-INSTRUCTIONS](PRODUCT.md#P-ANCHORS-INSTALL-AGENT-INSTRUCTIONS)
+
+- <a id="E-ANCHORS-INSTALL-INSTRUCTIONS-AIRULES"></a>**E-ANCHORS-INSTALL-INSTRUCTIONS-AIRULES**: For ai-rules installs, the installer creates `ai-rules/anchors.md` containing the ANCHORS instructions (telling the agent to load the anchors skill before making changes). Skips if the file already exists. Runs `ai-rules generate` after both the skill copy and rule file creation.
+  ← [P-ANCHORS-INSTALL-AGENT-INSTRUCTIONS](PRODUCT.md#P-ANCHORS-INSTALL-AGENT-INSTRUCTIONS)
 
 ---
 

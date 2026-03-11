@@ -10,9 +10,9 @@ see-also:
 
 ## Overview
 
-ANCHORS is a requirements-driven development framework distributed as a Claude Code skill. It keeps product requirements, engineering requirements, testing strategy, dependency constraints, and implementation in a consistent, traceable hierarchy.
+ANCHORS is a requirements-driven development framework distributed as an AI agent skill. It keeps product requirements, engineering requirements, testing strategy, dependency constraints, and implementation in a consistent, traceable hierarchy.
 
-**Users** are developers using Claude Code who want structured requirements traceability in their projects.
+**Users** are developers using AI coding agents who want structured requirements traceability in their projects.
 
 **Problem** — Requirements drift from implementation over time. Without a defined truth hierarchy and audit tooling, teams lose track of which requirements are covered, which are stale, and where tests are missing.
 
@@ -21,8 +21,9 @@ ANCHORS is a requirements-driven development framework distributed as a Claude C
 - Documents form a strict truth hierarchy that resolves disagreements deterministically
 - Every requirement must be traceable from document → code → test
 - The framework is lightweight — plain markdown files, no build tooling required
+- The framework is agent-agnostic — documents are plain markdown, the skill works across agents
 
-**Deployment model:** Installed as a Claude Code skill via symlink. Invoked interactively through `/anchors`.
+**Deployment model:** Installed as a skill for AI coding agents (Claude Code, Amp, Codex) via the installer, or distributed through ai-rules for multi-agent projects. Invoked interactively through `/anchors`.
 
 ---
 
@@ -52,7 +53,7 @@ ANCHORS is a requirements-driven development framework distributed as a Claude C
 
 - <a id="P-ANCHORS-INIT-EXISTING"></a>**P-ANCHORS-INIT-EXISTING**: If ANCHORS documents already exist in the target directory, the skill asks the user whether to skip existing files or overwrite all.
 
-- <a id="P-ANCHORS-INIT-CLAUDE-MD"></a>**P-ANCHORS-INIT-CLAUDE-MD**: When initializing the first module in a repo (no parent `ANCHORS.md`), the skill appends a short ANCHORS section to the repo's agent instructions file (`AGENTS.md` and/or `CLAUDE.md`). If both exist and are separate files, both are updated. If one is a symlink to the other, only the real file is updated. If neither exists, `AGENTS.md` is created. The section instructs Claude to load the anchors skill — it should not duplicate the framework rules already in the skill.
+- <a id="P-ANCHORS-INIT-CLAUDE-MD"></a>**P-ANCHORS-INIT-CLAUDE-MD**: When initializing the first module in a repo (no parent `ANCHORS.md`), the skill appends a short ANCHORS section to the repo's agent instructions file (`AGENTS.md` and/or `CLAUDE.md`). If both exist and are separate files, both are updated. If one is a symlink to the other, only the real file is updated. If neither exists, `AGENTS.md` is created. The section instructs the agent to load the anchors skill — it should not duplicate the framework rules already in the skill. If the project uses ai-rules (has an `ai-rules/` directory), the skill skips this step since ai-rules manages agent instruction files.
 
 - <a id="P-ANCHORS-INIT-UNIQUE-PREFIX"></a>**P-ANCHORS-INIT-UNIQUE-PREFIX**: The skill verifies that the chosen prefix is unique across all `ANCHORS.md` files in the repo.
 
@@ -95,6 +96,22 @@ ANCHORS is a requirements-driven development framework distributed as a Claude C
 - <a id="P-ANCHORS-ROUTE-INTERACTIVE"></a>**P-ANCHORS-ROUTE-INTERACTIVE**: When invoked with no arguments, the skill asks the user whether to init or audit, recommending audit if modules already exist and init if none exist.
 
 - <a id="P-ANCHORS-ROUTE-ARGS"></a>**P-ANCHORS-ROUTE-ARGS**: The skill accepts `init`, `init <path>`, and `audit` as arguments to skip the interactive prompt.
+
+---
+
+## 6. Installation
+
+- <a id="P-ANCHORS-INSTALL-AGENTS"></a>**P-ANCHORS-INSTALL-AGENTS**: The installer supports multiple AI coding agents: Claude Code, Amp, Codex, and ai-rules. Users select their agent from a menu.
+
+- <a id="P-ANCHORS-INSTALL-SCOPE"></a>**P-ANCHORS-INSTALL-SCOPE**: For direct agent installs (Claude Code, Amp, Codex), users choose between user-level (available in all projects) and project-level (available in one repo) installation.
+
+- <a id="P-ANCHORS-INSTALL-COPY"></a>**P-ANCHORS-INSTALL-COPY**: The installer copies the skill directory to the agent-appropriate location, replacing any existing installation at that path.
+
+- <a id="P-ANCHORS-INSTALL-AIRULES"></a>**P-ANCHORS-INSTALL-AIRULES**: When ai-rules is selected, the installer copies the skill into the project's `ai-rules/skills/` directory and runs `ai-rules generate` to produce agent-specific configuration files. This requires the `ai-rules` CLI to be installed and an `ai-rules/` directory to exist in the project.
+
+- <a id="P-ANCHORS-INSTALL-AIRULES-PREREQS"></a>**P-ANCHORS-INSTALL-AIRULES-PREREQS**: The installer validates ai-rules prerequisites before proceeding: the `ai-rules` CLI must be on PATH, and the project must have an `ai-rules/` directory (created by `ai-rules init`). Clear error messages guide the user to resolve missing prerequisites.
+
+- <a id="P-ANCHORS-INSTALL-AGENT-INSTRUCTIONS"></a>**P-ANCHORS-INSTALL-AGENT-INSTRUCTIONS**: For project-level installs, the installer ensures the agent knows to load the ANCHORS skill. For direct agent installs (Claude Code, Amp, Codex), it appends an ANCHORS section to the repo's agent instructions file using the same logic as init step 6 (`AGENTS.md`/`CLAUDE.md` handling). For ai-rules, it creates a rule file in `ai-rules/` with the ANCHORS instructions so that `ai-rules generate` includes them in generated agent configs.
 
 ---
 
