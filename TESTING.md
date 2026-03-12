@@ -73,7 +73,8 @@ The production implementation is `SKILL.md` executed by Claude Code. Template fi
 | **Init workflow** (P-ANCHORS-INIT-*) | Static (verify SKILL.md describes all steps) | E2E (full init in empty repo, manual) |
 | **Audit workflow** (P-ANCHORS-AUDIT-*) | Integration (audit logic on fixtures) | E2E (full `/anchors audit`, manual) |
 | **Monorepo support** (P-ANCHORS-MONO-*) | Integration (multi-module fixture repo) | E2E (audit with cross-module refs) |
-| **Routing** (P-ANCHORS-ROUTE-*) | Static (verify SKILL.md routing table) | E2E (interactive prompts, manual) |
+| **Routing** (P-ANCHORS-ROUTE-*) | Static (verify SKILL.md routing table covers init, audit, embed) | E2E (interactive prompts, manual) |
+| **Detached mode** (P-ANCHORS-DETACHED-*, P-ANCHORS-MODE-*) | Static (verify SKILL.md contains mode detection, forward ref format, embed steps) | Integration (detached fixture with forward ref validation) |
 | **Installer** (P-ANCHORS-INSTALL-*) | Unit (install.sh syntax, structure) | Integration (target dir resolution, ai-rules prereq checks) |
 
 ---
@@ -235,7 +236,23 @@ ANCHORS is unusual: it's a skill definition (instructions) plus templates, not c
 | **Open questions** | No unresolved OPEN-* items |
 | **Frontmatter** | All documents have scope and see-also fields |
 
-### 2.9 Installer (`test_installer.sh`)
+### 2.9 Detached Mode (`test_detached_mode.sh`)
+
+**Setup:** `testdata/fixtures/detached-module/` — a module with `repo` field in ANCHORS.md frontmatter, ERD.md containing `→` forward references, and a cloned target snapshot under `testdata/fixtures/detached-target/` simulating the target repo.
+
+| Test Area | What to Test |
+|-----------|-------------|
+| **Mode detection** | ANCHORS.md with `repo` field detected as detached mode; without `repo` detected as embedded (E-ANCHORS-DETACHED-MODE-DETECTION) |
+| **Frontmatter schema** | `repo`, `ref`, `path` fields parsed from ANCHORS.md frontmatter (E-ANCHORS-DETACHED-FRONTMATTER) |
+| **Forward ref format** | `→` references use backtick-wrapped `file:symbol` format, comma-separated (E-ANCHORS-DETACHED-FORWARD-REF-FORMAT) |
+| **Forward ref validation** | Valid refs resolve against target fixture; broken refs (missing file, missing symbol) reported (E-ANCHORS-DETACHED-FORWARD-REF-VALIDATION) |
+| **No inline tag search** | Audit in detached mode does not search target code for `P-*`/`E-*` inline tags (E-ANCHORS-DETACHED-NO-INLINE-TAGS) |
+| **Doc consistency** | Backlinks, PRD coverage, and other doc-internal checks work the same in detached mode |
+| **Embed prereq** | Embed action rejected on embedded modules (no `repo` field) (E-ANCHORS-EMBED-PREREQ) |
+| **Embed strips forward refs** | After embed, ERD.md has no `→` lines; `←` backlinks preserved (E-ANCHORS-EMBED-STRIP-FORWARD-REFS) |
+| **Embed strips frontmatter** | After embed, ANCHORS.md has only `prefix`, no `repo`/`ref`/`path` (E-ANCHORS-EMBED-STRIP-FRONTMATTER) |
+
+### 2.10 Installer (`test_installer.sh`)
 
 **Setup:** The `install.sh` script.
 
@@ -285,6 +302,7 @@ test/test_fixture_gaps.sh          # Layer 2: gap detection
 test/test_fixture_multi_module.sh  # Layer 2: cross-module refs
 test/test_fixture_prefix_collision.sh  # Layer 2: prefix collision
 test/test_code_traceability.sh     # Layer 2: code/test tag detection
+test/test_detached_mode.sh         # Layer 2: detached mode detection, forward refs
 test/test_self_audit.sh            # Layer 2/3: self-consistency
 ```
 
@@ -297,6 +315,8 @@ testdata/
     gaps-module/              # Module with deliberate traceability gaps
     multi-module/             # Two modules with cross-references
     broken-cross-refs/        # Multi-module with broken relative paths
+    detached-module/          # Detached mode module with forward refs
+    detached-target/          # Simulated target repo for detached mode tests
 ```
 
 Each fixture is a minimal directory tree with ANCHORS documents and (where needed) source/test files containing traceability tags. Tests are read-only — they never modify fixtures. The one exception (`test_fixture_prefix_collision.sh`) creates a temp dir and cleans it up with a trap.

@@ -31,7 +31,8 @@ With the skill installed:
 /anchors init           # Scaffold ANCHORS documents in a directory
 /anchors init path/to   # Scaffold in a specific directory
 /anchors audit          # Audit traceability across all modules
-/anchors                # Interactive — choose init or audit
+/anchors embed          # Convert detached module to embedded
+/anchors                # Interactive — choose init, audit, or embed
 ```
 
 Without the skill, create the documents manually — see the templates in `skill/templates/`.
@@ -71,6 +72,55 @@ PRODUCT.md        ← source of truth (what)
 ```
 
 When things disagree, higher-authority documents win. Every `E-*` requirement links back to the `P-*` it satisfies. The audit verifies these links are complete and consistent.
+
+## Embedded vs detached mode
+
+ANCHORS operates in two modes:
+
+**Embedded** (default) — docs live in the same repo as the code. Requirement IDs are tagged inline in source and test files. Init researches the local codebase. Audit searches local code for traceability. This is what you use when you own the repo.
+
+**Detached** — docs live in a separate repo from the code they describe. `ANCHORS.md` frontmatter points to the target codebase, and ERD.md uses `→` forward references to trace requirements to code locations in the target. The target repo is never modified.
+
+### When to use detached mode
+
+- **Understanding a codebase you don't own.** Create a docs repo, run `/anchors init`, point it at the target. You get structured requirements docs with `→` refs to specific files and symbols — a navigable map organized by functional area.
+- **Developing against code you can't modify.** Your docs describe the contract you depend on, pinned to a specific ref. Bump the ref and re-audit to detect breaking changes.
+- **Documenting a third-party service or library.** Track what you depend on and where, without forking or modifying anything.
+
+### Detached mode setup
+
+During `/anchors init`, if the target directory has no code, the skill asks whether you're describing an external codebase. If yes, it collects:
+
+```yaml
+# ANCHORS.md frontmatter
+---
+prefix: AUTH
+repo: github.com/org/auth-service   # target codebase
+ref: main                            # branch, tag, or SHA
+path: /                              # subdirectory (optional)
+---
+```
+
+Init clones the target, researches it, and generates docs with forward references:
+
+```markdown
+- **E-AUTH-SESSION**: Sessions use signed JWTs with 24-hour expiry.
+  ← [P-AUTH-LOGIN](PRODUCT.md#P-AUTH-LOGIN)
+  → `src/auth/session.go:NewSession`, `src/auth/middleware.go:ValidateToken`
+```
+
+Audit clones the target and verifies each `→` ref resolves — the file exists and the symbol is findable. Broken refs (renamed function, moved file) show up in the audit report.
+
+### Converting to embedded mode
+
+If you find detached docs useful and want to fully adopt ANCHORS in the codebase, run `/anchors embed`. This:
+
+1. Reads the `→` forward references from ERD.md
+2. Adds inline requirement tags to the source files at each referenced location
+3. Removes the `→` lines from ERD.md
+4. Removes `repo`/`ref`/`path` from ANCHORS.md, switching to embedded mode
+
+The code must be locally accessible (you've forked or cloned the target). After embedding, `/anchors audit` searches local code for inline tags like any embedded module.
 
 ## Monorepo support
 

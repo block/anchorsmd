@@ -115,6 +115,26 @@ ANCHORS is a requirements-driven development framework distributed as an AI agen
 
 ---
 
+## 7. Detached Mode
+
+- <a id="P-ANCHORS-MODE-EMBEDDED"></a>**P-ANCHORS-MODE-EMBEDDED**: The default mode — docs live in the same repo as the code. All existing behavior (inline code tags, audit code search, init research against local files) applies to embedded mode.
+
+- <a id="P-ANCHORS-MODE-DETACHED"></a>**P-ANCHORS-MODE-DETACHED**: Docs can live in a separate repo from the code they describe. ANCHORS.md points to the target codebase. This enables requirements-driven development for codebases the user doesn't own or can't modify.
+
+- <a id="P-ANCHORS-DETACHED-POINTER"></a>**P-ANCHORS-DETACHED-POINTER**: In detached mode, ANCHORS.md frontmatter includes `repo`, `ref`, and `path` fields that identify the target codebase.
+
+- <a id="P-ANCHORS-DETACHED-FORWARD-REFS"></a>**P-ANCHORS-DETACHED-FORWARD-REFS**: In detached mode, ERD.md uses `→` forward references to trace requirements to specific code locations in the target repo (files and symbols).
+
+- <a id="P-ANCHORS-DETACHED-INIT"></a>**P-ANCHORS-DETACHED-INIT**: Init for detached mode fetches the target repo for research and generates documents with forward references to code locations.
+
+- <a id="P-ANCHORS-DETACHED-AUDIT"></a>**P-ANCHORS-DETACHED-AUDIT**: Audit for detached mode fetches the target repo and validates that forward references resolve to real files and symbols.
+
+- <a id="P-ANCHORS-DETACHED-NO-TOUCH"></a>**P-ANCHORS-DETACHED-NO-TOUCH**: Detached mode never modifies the target codebase — no inline tags, no sidecar files, nothing.
+
+- <a id="P-ANCHORS-DETACHED-EMBED"></a>**P-ANCHORS-DETACHED-EMBED**: A detached module can be converted to embedded mode. The embed action adds inline requirement tags to source files based on the `→` forward references, removes the forward references from ERD.md, and removes the `repo`/`ref`/`path` fields from ANCHORS.md. This requires the target code to be locally accessible.
+
+---
+
 ## Open Questions
 
 (none)

@@ -32,6 +32,36 @@ A module's ANCHORS document set consists of up to four documents plus a marker f
 
 All four documents are part of the framework. TESTING.md and DEPENDENCIES.md participate in the truth hierarchy and have defined disagreement rules.
 
+### Modes
+
+ANCHORS operates in one of two modes:
+
+- **Embedded** (default): Docs live in the same repo as the code. Requirement IDs are tagged inline in source code and tests. Audit searches the local codebase for traceability. This is the standard mode.
+- **Detached**: Docs live in a separate repo from the code they describe. `ANCHORS.md` frontmatter includes `repo`, `ref`, and `path` fields pointing to the target codebase. Traceability uses `→` forward references in ERD.md pointing to code locations in the target repo. The target codebase is never modified.
+
+Mode is detected automatically: if `ANCHORS.md` frontmatter contains a `repo` field, the module is detached. Otherwise it's embedded.
+
+**ANCHORS.md frontmatter** — embedded mode:
+```yaml
+---
+prefix: AUTH
+---
+```
+
+**ANCHORS.md frontmatter** — detached mode:
+```yaml
+---
+prefix: AUTH
+repo: github.com/org/auth-service
+ref: main
+path: /
+---
+```
+
+- `repo` — target codebase (GitHub URL or local path). Presence of this field indicates detached mode.
+- `ref` — branch, tag, or SHA to track (defaults to `main`)
+- `path` — subdirectory within the target repo to scope research and traceability (defaults to `/`)
+
 ### Truth Hierarchy
 
 ```
@@ -80,6 +110,15 @@ Implementation (must satisfy all of the above)
 ```
 
 Every `E-*` requirement must have a `←` backlink. This is how the audit tracks coverage.
+
+**ERD.md (detached mode)** — `E-` prefix with backlink and `→` forward references to code locations in the target repo:
+```markdown
+- <a id="E-AUTH-SESSION"></a>**E-AUTH-SESSION**: Sessions use signed JWTs with 24-hour expiry.
+  ← [P-AUTH-LOGIN](PRODUCT.md#P-AUTH-LOGIN)
+  → `src/auth/session.go:NewSession`, `src/auth/middleware.go:ValidateToken`
+```
+
+The `→` line lists `file:symbol` pairs wrapped in backticks, comma-separated. The file path is relative to the target repo root (or the `path` subdirectory if specified in ANCHORS.md). Forward references replace inline code tags — in detached mode, the target code is never modified.
 
 **DEPENDENCIES.md** — `D-DEP-` prefix:
 ```markdown
@@ -154,8 +193,10 @@ This skill is invoked as `/anchors` with optional arguments.
 | `/anchors init` | **Init** — determine target path (see below) |
 | `/anchors init path/to/dir` | **Init** — use the given path |
 | `/anchors audit` | **Audit** |
+| `/anchors embed` | **Embed** — convert detached module to embedded (see below) |
+| `/anchors embed path/to/dir` | **Embed** — convert the detached module at the given path |
 
-Any other args → tell the user the available modes (init, audit).
+Any other args → tell the user the available modes (init, audit, embed).
 
 **Interactive mode prompt:** When invoked with no args, first check whether any `ANCHORS.md` files exist in the repo (glob for `**/ANCHORS.md` excluding `node_modules`, `vendor`, `.git`, build output). Then use `AskUserQuestion`:
 - Question: "What would you like to do?"
@@ -163,6 +204,7 @@ Any other args → tell the user the available modes (init, audit).
 - If ANCHORS modules already exist, present **Audit** first (recommended):
   - **Audit** — "Check traceability and consistency across modules (Recommended)"
   - **Init** — "Scaffold ANCHORS documents in a new directory"
+  - **Embed** — "Convert a detached module to embedded mode" (only show if any module has a `repo` field)
 - If no ANCHORS modules exist, present **Init** first (recommended):
   - **Init** — "Scaffold ANCHORS documents in a directory (Recommended)"
   - **Audit** — "Check traceability and consistency across modules"
@@ -194,9 +236,21 @@ Generate a complete ANCHORS document set for a project or module. Init produces 
    - Question 1: "What is the project/module name?" — Header: "Name" — Options: offer the target directory name as the recommended default, plus 1-2 alternatives derived from parent directories or repo name.
    - Question 2: "What requirement ID prefix should be used?" — Header: "Prefix" — Options: offer an uppercase abbreviation of the name as the recommended default, plus 1-2 alternatives (e.g., shorter/longer forms).
 
-3. **Research the project.** The goal is to build a complete understanding of what the project does, how it's built, what it depends on, and how it's tested. The approach depends on whether the target directory contains existing code.
+3. **Determine the mode.** Check whether the target directory contains code (source files, not just docs). If it does, this is an **embedded** init — skip to step 4. If the target directory has no code (it's a standalone docs repo or empty directory), use `AskUserQuestion`:
+   - Question: "Is this describing a codebase in another repo?"
+   - Header: "Mode"
+   - Options: **Detached** ("Yes — point to an external codebase"), **Greenfield** ("No — this is a new project without existing code")
 
-   **If the target directory contains code:**
+   If **Detached**, use `AskUserQuestion` to collect target repo details:
+   - Question 1: "What is the target repo?" — Header: "Repo" — Free text (GitHub URL or local path)
+   - Question 2: "What branch/tag/SHA to track?" — Header: "Ref" — Options: `main` (default), `master`, Other
+   - Question 3: "Subdirectory within the repo? (leave blank for root)" — Header: "Path" — Free text, defaults to `/`
+
+   Write the `repo`, `ref`, and `path` into ANCHORS.md frontmatter alongside the prefix.
+
+4. **Research the project.** The goal is to build a complete understanding of what the project does, how it's built, what it depends on, and how it's tested. The approach depends on mode and whether the target directory contains existing code.
+
+   **Embedded mode — target directory contains code:**
 
    Launch subagents to exhaustively research the codebase. Each subagent explores a different dimension and returns structured findings — not raw source code. The main context receives only the findings.
 
@@ -214,25 +268,31 @@ Generate a complete ANCHORS document set for a project or module. Init produces 
 
    **Tests deserve special attention.** In the ANCHORS truth hierarchy, tests are truthier than implementation. Tests encode real behaviors, edge cases, invariants, and contract boundaries that may not be obvious from implementation alone. The functional areas and technical architecture agents should weight test files heavily — a tested behavior is a stronger signal of a real requirement than an implementation detail that might be incidental. The testing agent's findings directly feed TESTING.md, but they also inform PRODUCT.md (what behaviors matter enough to test) and ERD.md (what technical contracts are explicitly verified).
 
-   **If the target directory has no code (greenfield):**
+   **Detached mode — target repo specified in ANCHORS.md:**
+
+   Access the target codebase at `{repo}` (at the `{ref}` revision). If `path` is not `/`, scope research to that subdirectory.
+
+   Launch the same four subagents as embedded mode, but point them at the target codebase instead of the local docs directory. The subagents research the target codebase exactly as they would for embedded mode. Additionally, the technical architecture agent should note specific file paths and symbol names — these will become `→` forward references in ERD.md.
+
+   **Greenfield — no code, no target repo:**
 
    The user's description of the project (from the conversation context, or a README, design doc, or similar artifact in the repo) is the source material. If the conversation doesn't contain enough context, use `AskUserQuestion` to ask the user to describe the project — what it does, who it's for, and how it works. This is a single open-ended question, not a multi-step interview.
 
-4. **Read the templates** from the `templates/` directory relative to this skill file (sibling of `SKILL.md`) as structural references: `templates/PRODUCT.md`, `templates/ERD.md`, `templates/TESTING.md`, and `templates/DEPENDENCIES.md`. These show the expected document format, section organization, frontmatter, and ID conventions. Do **not** copy them into the project — use them to guide the structure of the generated documents.
+5. **Read the templates** from the `templates/` directory relative to this skill file (sibling of `SKILL.md`) as structural references: `templates/PRODUCT.md`, `templates/ERD.md`, `templates/TESTING.md`, and `templates/DEPENDENCIES.md`. These show the expected document format, section organization, frontmatter, and ID conventions. Do **not** copy them into the project — use them to guide the structure of the generated documents.
 
-5. **Generate the documents.** Using the research findings (or user description) and the template structure for reference, generate fully populated documents:
+6. **Generate the documents.** Using the research findings (or user description) and the template structure for reference, generate fully populated documents:
 
-   - **ANCHORS.md**: Module marker with the prefix in frontmatter.
+   - **ANCHORS.md**: Module marker with the prefix in frontmatter. In detached mode, also include `repo`, `ref`, and `path` fields.
    - **PRODUCT.md**: Real P-* requirements organized by functional area. Every requirement should describe user-facing behavior, not implementation details. Use the prefix from ANCHORS.md to scope IDs (e.g., prefix `AUTH` → `P-AUTH-LOGIN`).
-   - **ERD.md**: Real E-* requirements organized by technical concern, each with a `←` backlink to the P-* requirement it satisfies. Every P-* requirement must have at least one corresponding E-* requirement.
+   - **ERD.md**: Real E-* requirements organized by technical concern, each with a `←` backlink to the P-* requirement it satisfies. Every P-* requirement must have at least one corresponding E-* requirement. **In detached mode**, each E-* requirement should also include `→` forward references to specific file:symbol locations in the target repo discovered during research.
    - **TESTING.md**: Real testing strategy — actual test layers, actual coverage mapping from requirements to test layers, actual tooling, actual exclusions. Not boilerplate.
    - **DEPENDENCIES.md**: Real external dependencies with D-DEP-* IDs — or omit the file entirely if there are no true external dependencies.
 
    The generated documents must be internally consistent: every E-* traces to a P-*, the testing strategy covers the actual requirements, and DEPENDENCIES.md only lists things that are genuinely external.
 
-6. **Write the files** to the target directory. If the user chose **Overwrite all** in step 1, and DEPENDENCIES.md was omitted (no true external dependencies), delete any existing `DEPENDENCIES.md` in the target directory to avoid stale content. If the user chose **Skip existing**, never delete existing files.
+7. **Write the files** to the target directory. If the user chose **Overwrite all** in step 1, and DEPENDENCIES.md was omitted (no true external dependencies), delete any existing `DEPENDENCIES.md` in the target directory to avoid stale content. If the user chose **Skip existing**, never delete existing files.
 
-7. Check whether a parent directory (up to the repo root) already contains an `ANCHORS.md`. If not, this is the first module in the repo — append the ANCHORS section to the agent instructions file at the repo root.
+8. Check whether a parent directory (up to the repo root) already contains an `ANCHORS.md`. If not, this is the first module in the repo — append the ANCHORS section to the agent instructions file at the repo root.
 
    **Skip this step** if an `ai-rules/` directory exists at the repo root — ai-rules manages agent instruction files via `ai-rules generate`.
 
@@ -251,9 +311,9 @@ Generate a complete ANCHORS document set for a project or module. Init produces 
    - If only one exists, append to that one.
    - If neither exists, create `AGENTS.md`.
 
-8. If there is an existing `ANCHORS.md` in a parent, verify the new prefix is unique across all `**/ANCHORS.md` files in the repo.
+9. If there is an existing `ANCHORS.md` in a parent, verify the new prefix is unique across all `**/ANCHORS.md` files in the repo.
 
-9. Print a summary of what was created — list the documents and a count of requirements generated (e.g., "12 product requirements, 18 engineering requirements, 3 external dependencies").
+10. Print a summary of what was created — list the documents and a count of requirements generated (e.g., "12 product requirements, 18 engineering requirements, 3 external dependencies").
 
 ---
 
@@ -263,9 +323,11 @@ Audit traceability and consistency across all ANCHORS modules in the repo.
 
 **Steps:**
 
-1. **Discover modules.** Glob for `**/ANCHORS.md` (excluding `node_modules`, `vendor`, `.git`, build output). Read frontmatter to get each module's prefix. Check for prefix collisions.
+1. **Discover modules.** Glob for `**/ANCHORS.md` (excluding `node_modules`, `vendor`, `.git`, build output). Read frontmatter to get each module's prefix. Check for prefix collisions. Note which modules are detached (have a `repo` field in frontmatter).
 
-2. **For each module:**
+2. **For detached modules, access the target repo.** For each module with a `repo` field, access the target codebase at the specified `ref`. Cache or reuse the checkout for subsequent audit steps.
+
+3. **For each module:**
 
    a. **Read documents.** Read `PRODUCT.md`, `ERD.md`, `TESTING.md`, and `DEPENDENCIES.md` relative to the module's `ANCHORS.md`. Report which exist and which are missing.
 
@@ -279,18 +341,25 @@ Audit traceability and consistency across all ANCHORS modules in the repo.
 
    f. **Check DEPENDENCIES.md boundary.** Verify that nothing listed as an external dependency in DEPENDENCIES.md is contradicted by ERD.md requirements showing the system manages it internally (a stale dependency that was since internalized).
 
-3. **Check code traceability.** Search the codebase (excluding `node_modules`, `vendor`, `.git`, build output) for references to `P-*`, `E-*`, and `D-DEP-*` requirement IDs. Report:
+4. **Check code traceability (embedded modules only).** For embedded modules, search the codebase (excluding `node_modules`, `vendor`, `.git`, build output) for references to `P-*`, `E-*`, and `D-DEP-*` requirement IDs. Report:
    - Requirements referenced in code (good)
    - Requirements with no code references (potential coverage gaps)
    - Code references to IDs that don't exist in any document (stale tags)
 
-4. **Check test coverage tags.** Search test files for requirement ID references. Report requirements that have implementation references but no test references.
+   Skip this step for detached modules — they use forward references instead of inline code tags.
 
-5. **Check cross-module references.** Validate that any cross-module `←` backlinks (relative paths to other modules' documents) resolve to actual files and anchors.
+5. **Check forward references (detached modules only).** For detached modules, scan ERD.md for `→` lines and extract all `file:symbol` references. For each reference, resolve against the target codebase:
+   - Verify the file exists (at the `path` subdirectory if specified)
+   - Grep the file for the symbol name
+   - Report broken refs: missing files and missing symbols as separate categories
 
-6. **Check open questions.** Scan all documents for unresolved `OPEN-*` items.
+6. **Check test coverage tags (embedded modules only).** Search test files for requirement ID references. Report requirements that have implementation references but no test references. Skip for detached modules.
 
-7. **Print a summary report:**
+7. **Check cross-module references.** Validate that any cross-module `←` backlinks (relative paths to other modules' documents) resolve to actual files and anchors.
+
+8. **Check open questions.** Scan all documents for unresolved `OPEN-*` items.
+
+9. **Print a summary report:**
 
 ```
 ## ANCHORS Audit Report
@@ -299,12 +368,14 @@ Audit traceability and consistency across all ANCHORS modules in the repo.
 - services/auth (prefix: AUTH) — 4/4 documents
 - services/payments (prefix: PAY) — 3/4 documents (no DEPENDENCIES.md)
 - platform/shared (prefix: SHLIB) — 1/4 documents (ERD.md only)
+- docs/ext-api (prefix: EXTAPI, detached → github.com/org/api@main) — 3/4 documents
 
 ### Traceability (all modules)
 - ERD → PRD backlinks: 41/43 (2 missing)
 - PRD coverage by ERD: 28/28 (100%)
-- Requirements in code: 52/71 (73%)
-- Requirements in tests: 38/71 (54%)
+- Requirements in code (embedded): 52/71 (73%)
+- Requirements in tests (embedded): 38/71 (54%)
+- Forward references (detached): 12/14 (2 broken)
 
 ### Gaps
 
@@ -315,14 +386,18 @@ Audit traceability and consistency across all ANCHORS modules in the repo.
 #### Uncovered Product Requirements (P-* with no E-* coverage)
 (none)
 
-#### Untraced Requirements (no code references)
+#### Untraced Requirements (no code references — embedded modules)
 - AUTH: P-AUTH-NOTIFY-SOUND
 - SHLIB: E-SHLIB-RECOVERY-RESTART
 
-#### Requirements Without Test References
+#### Requirements Without Test References (embedded modules)
 - PAY: E-PAY-WEBHOOK-RETRY (in code but not in tests)
 
-#### Stale Code References
+#### Broken Forward References (detached modules)
+- EXTAPI: E-EXTAPI-RATE-LIMIT → `src/middleware/rate.go:RateLimit` (file not found)
+- EXTAPI: E-EXTAPI-AUTH-VERIFY → `src/auth/verify.go:VerifyToken` (symbol not found)
+
+#### Stale Code References (embedded modules)
 - src/legacy.go: references E-OLD-THING (not in any document)
 
 #### Open Questions
@@ -331,3 +406,45 @@ Audit traceability and consistency across all ANCHORS modules in the repo.
 #### DEPENDENCIES.md Boundary Issues
 (none)
 ```
+
+---
+
+## Embed Mode
+
+Convert a detached module to embedded mode. This adds inline requirement tags to source files based on `→` forward references, then strips the detached-mode artifacts from the docs. Only available for detached modules.
+
+### Determine the target module
+
+1. If a path was given as an argument, use it.
+2. If no path was given, check whether the current working directory has an `ANCHORS.md` with a `repo` field.
+   - **Yes** → use the current working directory.
+   - **No `repo` field** → error: "This module is already in embedded mode."
+   - **No `ANCHORS.md`** → error: "No ANCHORS module found in this directory."
+
+### Steps
+
+1. **Read the module.** Read `ANCHORS.md` frontmatter to get `repo`, `ref`, `path`. Read `ERD.md` and extract all `→` forward references (list of `file:symbol` pairs per E-* requirement).
+
+2. **Locate the code locally.** The target code must be accessible on the local filesystem. Resolution:
+   - If `repo` is a local path, use it directly.
+   - If `repo` is a remote URL, use `AskUserQuestion` to ask for the local path:
+     - Question: "Where is the code locally? (e.g., you cloned or forked the repo)"
+     - Header: "Code path"
+     - Suggest the parent directory and common sibling paths.
+   - Verify the path exists and contains the expected files (spot-check a few `→` refs).
+
+3. **Add inline tags.** For each `→` reference in ERD.md:
+   - Resolve the `file:symbol` against the local code path (scoped by `path` if set).
+   - Find the function/symbol definition in the file.
+   - Add an inline requirement tag comment above or on the function (e.g., `// E-AUTH-SESSION: sessions use signed JWTs`).
+   - Follow the standard code traceability rules: one tag per function, augment existing comments, don't replace them.
+   - If a `→` ref can't be resolved (file missing, symbol not found), skip it and report it at the end.
+
+4. **Update ERD.md.** Remove all `→` lines. The `←` backlinks are preserved unchanged.
+
+5. **Update ANCHORS.md.** Remove `repo`, `ref`, and `path` from the frontmatter, leaving only `prefix`. This switches the module to embedded mode.
+
+6. **Report results.** Print a summary:
+   - Number of inline tags added
+   - Number of `→` refs that couldn't be resolved (with details)
+   - Suggest running `/anchors audit` to verify the conversion
