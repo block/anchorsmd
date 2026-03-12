@@ -45,7 +45,7 @@ ANCHORS is a requirements-driven development framework distributed as an AI agen
 
 ## 2. Init Workflow
 
-- <a id="P-ANCHORS-INIT-SCAFFOLD"></a>**P-ANCHORS-INIT-SCAFFOLD**: Users can scaffold a new ANCHORS module in any directory. The skill creates `ANCHORS.md` and the four document templates populated with the chosen project name.
+- <a id="P-ANCHORS-INIT-SCAFFOLD"></a>**P-ANCHORS-INIT-SCAFFOLD**: Users can initialize a new ANCHORS module in any directory. The skill researches the project (exhaustively for existing codebases, from user description for greenfield) and generates fully populated documents — real requirements, real engineering specs, a real testing strategy. A full init (not "Skip existing") should produce a document set that passes an immediate audit.
 
 - <a id="P-ANCHORS-INIT-PATH"></a>**P-ANCHORS-INIT-PATH**: If no path is given and the current directory already has `ANCHORS.md`, the skill asks the user where to initialize. If the current directory is clean, it initializes there.
 

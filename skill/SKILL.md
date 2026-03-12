@@ -171,7 +171,7 @@ Any other args → tell the user the available modes (init, audit).
 
 ## Init Mode
 
-Scaffold the ANCHORS document set in a directory.
+Generate a complete ANCHORS document set for a project or module. Init produces fully populated documents — real requirements, real engineering specs, a real testing strategy — not empty templates. A full init (not "Skip existing") should produce a document set that passes an immediate audit.
 
 ### Determine the target path
 
@@ -188,23 +188,51 @@ Scaffold the ANCHORS document set in a directory.
 1. Check if any ANCHORS documents already exist in the target directory (`ANCHORS.md`, `PRODUCT.md`, `ERD.md`, `TESTING.md`, `DEPENDENCIES.md`). If any exist, use `AskUserQuestion` to confirm:
    - Question: "These ANCHORS documents already exist: [list]. Overwrite them?"
    - Header: "Overwrite"
-   - Options: **Skip existing** ("Only create missing documents"), **Overwrite all** ("Replace all documents with fresh templates")
+   - Options: **Skip existing** ("Only create missing documents"), **Overwrite all** ("Replace all documents with fresh content")
 
-2. Read the templates from the `templates/` directory relative to this skill file (sibling of `SKILL.md`):
-   - `templates/PRODUCT.md`
-   - `templates/ERD.md`
-   - `templates/TESTING.md`
-   - `templates/DEPENDENCIES.md`
-
-3. Use `AskUserQuestion` to ask the user for project details (both in a single call):
+2. Use `AskUserQuestion` to ask the user for project details (both in a single call):
    - Question 1: "What is the project/module name?" — Header: "Name" — Options: offer the target directory name as the recommended default, plus 1-2 alternatives derived from parent directories or repo name.
    - Question 2: "What requirement ID prefix should be used?" — Header: "Prefix" — Options: offer an uppercase abbreviation of the name as the recommended default, plus 1-2 alternatives (e.g., shorter/longer forms).
 
-4. Create `ANCHORS.md` in the target directory with the prefix in frontmatter.
+3. **Research the project.** The goal is to build a complete understanding of what the project does, how it's built, what it depends on, and how it's tested. The approach depends on whether the target directory contains existing code.
 
-5. Copy the four templates into the target directory, replacing `[Project Name]` with the project name.
+   **If the target directory contains code:**
 
-6. Check whether a parent directory (up to the repo root) already contains an `ANCHORS.md`. If not, this is the first module in the repo — append the ANCHORS section to the agent instructions file at the repo root.
+   Launch subagents to exhaustively research the codebase. Each subagent explores a different dimension and returns structured findings — not raw source code. The main context receives only the findings.
+
+   Launch these in parallel:
+
+   - **Functional areas agent**: Identify all user-facing functional areas, workflows, and behaviors. For each area, describe what the user sees/experiences, the key scenarios, and edge cases. Return a structured list of functional areas with requirement-level descriptions.
+
+   - **Technical architecture agent**: Map the technical structure — components, interfaces, data flow, protocols, storage, external API contracts. Identify trust boundaries and contract boundaries. Return a structured description of the architecture organized by technical concern.
+
+   - **Dependencies agent**: Find all external dependencies — services, runtimes, tools, and systems that must be present in the environment because the project cannot supply them. Distinguish between managed dependencies (bundled/installed by the project) and true external dependencies. Return a structured list with what each dependency is used by and why it's external.
+
+   - **Testing agent**: Analyze the existing test suite — what frameworks are used, what layers exist (unit/integration/e2e), what's covered, what's not, where fixtures live, what test infrastructure exists. Return a structured summary of the testing approach, coverage patterns, and gaps.
+
+   Each subagent should read broadly — not just top-level files, but trace into implementations, configs, tests, and build files. The findings should be exhaustive in coverage but compact in format: structured lists and descriptions, not code snippets.
+
+   **Tests deserve special attention.** In the ANCHORS truth hierarchy, tests are truthier than implementation. Tests encode real behaviors, edge cases, invariants, and contract boundaries that may not be obvious from implementation alone. The functional areas and technical architecture agents should weight test files heavily — a tested behavior is a stronger signal of a real requirement than an implementation detail that might be incidental. The testing agent's findings directly feed TESTING.md, but they also inform PRODUCT.md (what behaviors matter enough to test) and ERD.md (what technical contracts are explicitly verified).
+
+   **If the target directory has no code (greenfield):**
+
+   The user's description of the project (from the conversation context, or a README, design doc, or similar artifact in the repo) is the source material. If the conversation doesn't contain enough context, use `AskUserQuestion` to ask the user to describe the project — what it does, who it's for, and how it works. This is a single open-ended question, not a multi-step interview.
+
+4. **Read the templates** from the `templates/` directory relative to this skill file (sibling of `SKILL.md`) as structural references: `templates/PRODUCT.md`, `templates/ERD.md`, `templates/TESTING.md`, and `templates/DEPENDENCIES.md`. These show the expected document format, section organization, frontmatter, and ID conventions. Do **not** copy them into the project — use them to guide the structure of the generated documents.
+
+5. **Generate the documents.** Using the research findings (or user description) and the template structure for reference, generate fully populated documents:
+
+   - **ANCHORS.md**: Module marker with the prefix in frontmatter.
+   - **PRODUCT.md**: Real P-* requirements organized by functional area. Every requirement should describe user-facing behavior, not implementation details. Use the prefix from ANCHORS.md to scope IDs (e.g., prefix `AUTH` → `P-AUTH-LOGIN`).
+   - **ERD.md**: Real E-* requirements organized by technical concern, each with a `←` backlink to the P-* requirement it satisfies. Every P-* requirement must have at least one corresponding E-* requirement.
+   - **TESTING.md**: Real testing strategy — actual test layers, actual coverage mapping from requirements to test layers, actual tooling, actual exclusions. Not boilerplate.
+   - **DEPENDENCIES.md**: Real external dependencies with D-DEP-* IDs — or omit the file entirely if there are no true external dependencies.
+
+   The generated documents must be internally consistent: every E-* traces to a P-*, the testing strategy covers the actual requirements, and DEPENDENCIES.md only lists things that are genuinely external.
+
+6. **Write the files** to the target directory. If the user chose **Overwrite all** in step 1, and DEPENDENCIES.md was omitted (no true external dependencies), delete any existing `DEPENDENCIES.md` in the target directory to avoid stale content. If the user chose **Skip existing**, never delete existing files.
+
+7. Check whether a parent directory (up to the repo root) already contains an `ANCHORS.md`. If not, this is the first module in the repo — append the ANCHORS section to the agent instructions file at the repo root.
 
    **Skip this step** if an `ai-rules/` directory exists at the repo root — ai-rules manages agent instruction files via `ai-rules generate`.
 
@@ -223,13 +251,9 @@ Scaffold the ANCHORS document set in a directory.
    - If only one exists, append to that one.
    - If neither exists, create `AGENTS.md`.
 
-7. If there is an existing `ANCHORS.md` in a parent, verify the new prefix is unique across all `**/ANCHORS.md` files in the repo.
+8. If there is an existing `ANCHORS.md` in a parent, verify the new prefix is unique across all `**/ANCHORS.md` files in the repo.
 
-8. Print a summary of what was created and suggest next steps:
-   - Fill in PRODUCT.md first (it's the source of truth)
-   - Derive ERD.md from the product requirements
-   - Write TESTING.md to define coverage strategy
-   - Add DEPENDENCIES.md if the system has external dependencies
+9. Print a summary of what was created — list the documents and a count of requirements generated (e.g., "12 product requirements, 18 engineering requirements, 3 external dependencies").
 
 ---
 

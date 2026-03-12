@@ -1,6 +1,6 @@
 #!/bin/bash
 # Layer 1: Unit / Static — Template Integrity
-# Tests: E-ANCHORS-FRONTMATTER, E-ANCHORS-INIT-TEMPLATE-COPY
+# Tests: E-ANCHORS-FRONTMATTER, E-ANCHORS-INIT-RESEARCH
 # Validates TESTING.md §1.1: frontmatter, placeholders, anchor format, no stale IDs
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"

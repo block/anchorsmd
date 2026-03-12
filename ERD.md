@@ -61,7 +61,7 @@ ANCHORS is implemented entirely as a Claude Code skill — a markdown instructio
 - <a id="E-ANCHORS-INIT-CONFLICT-CHECK"></a>**E-ANCHORS-INIT-CONFLICT-CHECK**: Before writing, glob the target directory for all five filenames. If any exist, prompt: "Skip existing" (only create missing) or "Overwrite all" (replace everything).
   ← [P-ANCHORS-INIT-EXISTING](PRODUCT.md#P-ANCHORS-INIT-EXISTING)
 
-- <a id="E-ANCHORS-INIT-TEMPLATE-COPY"></a>**E-ANCHORS-INIT-TEMPLATE-COPY**: Templates are read from the `templates/` directory relative to this skill's installed location (sibling of `SKILL.md`). The `[Project Name]` placeholder in each template is replaced with the user-provided name. `ANCHORS.md` is generated (not templated) with the chosen prefix in frontmatter.
+- <a id="E-ANCHORS-INIT-RESEARCH"></a>**E-ANCHORS-INIT-RESEARCH**: For existing codebases, launch parallel subagents to exhaustively research functional areas, technical architecture, external dependencies, and testing. Each subagent returns structured findings (not raw source code) to protect context. Tests are weighted heavily — tested behaviors are stronger requirement signals than implementation details. For greenfield projects, generate from the user's project description. Templates in the `templates/` directory (sibling of `SKILL.md`) are read as structural references to guide document format and ID conventions — they are never copied into the project.
   ← [P-ANCHORS-INIT-SCAFFOLD](PRODUCT.md#P-ANCHORS-INIT-SCAFFOLD)
 
 - <a id="E-ANCHORS-INIT-DEFAULTS"></a>**E-ANCHORS-INIT-DEFAULTS**: The skill suggests the target directory name as the default project name and an uppercase abbreviation as the default prefix (e.g., directory `auth-service` → name "auth-service", prefix "AUTH").
