@@ -79,29 +79,44 @@ ANCHORS operates in two modes:
 
 **Embedded** (default) — docs live in the same repo as the code. Requirement IDs are tagged inline in source and test files. Init researches the local codebase. Audit searches local code for traceability. This is what you use when you own the repo.
 
-**Detached** — docs live in a separate repo from the code they describe. `ANCHORS.md` frontmatter points to the target codebase, and ERD.md uses `→` forward references to trace requirements to code locations in the target. The target repo is never modified.
+**Detached** — docs live separately from the code they describe. `ANCHORS.md` frontmatter includes `mode: detached`, and ERD.md uses `→` forward references to trace requirements to code locations in the target. The target code is never modified. Detached mode works both within the same repo (in-repo) and across repos (external).
 
 ### When to use detached mode
 
+- **Keeping requirements separate from code in a monorepo.** Put anchors docs in a dedicated subdirectory (e.g., `apps/penpal/anchors/`) pointing at sibling code. You get structured traceability without littering the codebase with inline tags.
 - **Understanding a codebase you don't own.** Create a docs repo, run `/anchors init`, point it at the target. You get structured requirements docs with `→` refs to specific files and symbols — a navigable map organized by functional area.
 - **Developing against code you can't modify.** Your docs describe the contract you depend on, pinned to a specific ref. Bump the ref and re-audit to detect breaking changes.
 - **Documenting a third-party service or library.** Track what you depend on and where, without forking or modifying anything.
 
 ### Detached mode setup
 
-During `/anchors init`, if the target directory has no code, the skill asks whether you're describing an external codebase. If yes, it collects:
+During `/anchors init`, if the target directory has no code, the skill asks whether you're describing code elsewhere in the repo or in an external repo.
+
+**In-repo detached** — anchors docs in the same repo, pointing at nearby code:
 
 ```yaml
-# ANCHORS.md frontmatter
+# apps/penpal/anchors/ANCHORS.md
 ---
-prefix: AUTH
-repo: github.com/org/auth-service   # target codebase
-ref: main                            # branch, tag, or SHA
-path: /                              # subdirectory (optional)
+prefix: PENPAL
+mode: detached
+path: ..              # relative to this file → apps/penpal/
 ---
 ```
 
-Init clones the target, researches it, and generates docs with forward references:
+**External detached** — anchors docs in a separate repo:
+
+```yaml
+# ANCHORS.md
+---
+prefix: AUTH
+mode: detached
+repo: github.com/org/auth-service   # target codebase
+ref: main                            # branch, tag, or SHA
+path: src/auth                       # subdirectory (optional)
+---
+```
+
+Both produce docs with forward references:
 
 ```markdown
 - **E-AUTH-SESSION**: Sessions use signed JWTs with 24-hour expiry.
@@ -109,7 +124,7 @@ Init clones the target, researches it, and generates docs with forward reference
   → `src/auth/session.go:NewSession`, `src/auth/middleware.go:ValidateToken`
 ```
 
-Audit clones the target and verifies each `→` ref resolves — the file exists and the symbol is findable. Broken refs (renamed function, moved file) show up in the audit report.
+Audit resolves the target (locally for in-repo, clone/fetch for external) and verifies each `→` ref — the file exists and the symbol is findable. Broken refs show up in the audit report.
 
 ### Converting to embedded mode
 
@@ -118,9 +133,9 @@ If you find detached docs useful and want to fully adopt ANCHORS in the codebase
 1. Reads the `→` forward references from ERD.md
 2. Adds inline requirement tags to the source files at each referenced location
 3. Removes the `→` lines from ERD.md
-4. Removes `repo`/`ref`/`path` from ANCHORS.md, switching to embedded mode
+4. Removes `mode`/`repo`/`ref`/`path` from ANCHORS.md, switching to embedded mode
 
-The code must be locally accessible (you've forked or cloned the target). After embedding, `/anchors audit` searches local code for inline tags like any embedded module.
+The code must be locally accessible (already local for in-repo; for external, you must have a local clone). After embedding, `/anchors audit` searches local code for inline tags like any embedded module.
 
 ## Monorepo support
 

@@ -12,6 +12,8 @@ assert_grep "SKILL.md documents interactive mode" 'no args.*Interactive|Interact
 assert_grep "SKILL.md documents init mode" '/anchors init' "$SKILL_FILE"
 assert_grep "SKILL.md documents init with path" 'init.*path|init <path>' "$SKILL_FILE"
 assert_grep "SKILL.md documents audit mode" '/anchors audit' "$SKILL_FILE"
+assert_grep "SKILL.md documents embed mode" '/anchors embed' "$SKILL_FILE"
+assert_grep "SKILL.md documents embed with path" 'embed.*path' "$SKILL_FILE"
 
 echo "  [1.2.2] Template paths in SKILL.md match actual files"
 # Init instructions must name each template file explicitly (not just the directory)

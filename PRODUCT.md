@@ -39,7 +39,7 @@ ANCHORS is a requirements-driven development framework distributed as an AI agen
 
 - <a id="P-ANCHORS-TRACEABILITY"></a>**P-ANCHORS-TRACEABILITY**: Requirement IDs can be tagged in source code and test files to create traceable links from documents through implementation to verification.
 
-- <a id="P-ANCHORS-PREFIX"></a>**P-ANCHORS-PREFIX**: Each module declares a unique prefix in `ANCHORS.md` frontmatter. Requirement IDs are scoped by this prefix (e.g., prefix `AUTH` → `P-AUTH-LOGIN`).
+- <a id="P-ANCHORS-PREFIX"></a>**P-ANCHORS-PREFIX**: Each module declares a unique uppercase prefix in `ANCHORS.md` frontmatter. Requirement IDs are scoped by this prefix (e.g., prefix `AUTH` → `P-AUTH-LOGIN`).
 
 ---
 
@@ -93,9 +93,9 @@ ANCHORS is a requirements-driven development framework distributed as an AI agen
 
 ## 5. Interactive Routing
 
-- <a id="P-ANCHORS-ROUTE-INTERACTIVE"></a>**P-ANCHORS-ROUTE-INTERACTIVE**: When invoked with no arguments, the skill asks the user whether to init or audit, recommending audit if modules already exist and init if none exist.
+- <a id="P-ANCHORS-ROUTE-INTERACTIVE"></a>**P-ANCHORS-ROUTE-INTERACTIVE**: When invoked with no arguments, the skill asks the user whether to init, audit, or embed, recommending audit if modules already exist and init if none exist. Embed is only offered when detached modules exist.
 
-- <a id="P-ANCHORS-ROUTE-ARGS"></a>**P-ANCHORS-ROUTE-ARGS**: The skill accepts `init`, `init <path>`, and `audit` as arguments to skip the interactive prompt.
+- <a id="P-ANCHORS-ROUTE-ARGS"></a>**P-ANCHORS-ROUTE-ARGS**: The skill accepts `init`, `init <path>`, `audit`, `embed`, and `embed <path>` as arguments to skip the interactive prompt.
 
 ---
 
@@ -117,21 +117,23 @@ ANCHORS is a requirements-driven development framework distributed as an AI agen
 
 ## 7. Detached Mode
 
-- <a id="P-ANCHORS-MODE-EMBEDDED"></a>**P-ANCHORS-MODE-EMBEDDED**: The default mode — docs live in the same repo as the code. All existing behavior (inline code tags, audit code search, init research against local files) applies to embedded mode.
+- <a id="P-ANCHORS-MODE-EMBEDDED"></a>**P-ANCHORS-MODE-EMBEDDED**: The default mode — docs live alongside the code they describe. All existing behavior (inline code tags, audit code search, init research against local files) applies to embedded mode.
 
-- <a id="P-ANCHORS-MODE-DETACHED"></a>**P-ANCHORS-MODE-DETACHED**: Docs can live in a separate repo from the code they describe. ANCHORS.md points to the target codebase. This enables requirements-driven development for codebases the user doesn't own or can't modify.
+- <a id="P-ANCHORS-MODE-DETACHED"></a>**P-ANCHORS-MODE-DETACHED**: Docs can live separately from the code they describe — either in a dedicated subdirectory within the same repo or in a completely separate repo. Detached mode enables requirements-driven development without modifying the target codebase. Mode is set explicitly via `mode: detached` in ANCHORS.md frontmatter.
 
-- <a id="P-ANCHORS-DETACHED-POINTER"></a>**P-ANCHORS-DETACHED-POINTER**: In detached mode, ANCHORS.md frontmatter includes `repo`, `ref`, and `path` fields that identify the target codebase.
+- <a id="P-ANCHORS-DETACHED-IN-REPO"></a>**P-ANCHORS-DETACHED-IN-REPO**: In-repo detached mode: the anchors documents live in a subdirectory of the same repo as the code (e.g., `apps/penpal/anchors/`). The `path` field locates the target code relative to the ANCHORS.md file. No `repo` or `ref` fields are needed.
 
-- <a id="P-ANCHORS-DETACHED-FORWARD-REFS"></a>**P-ANCHORS-DETACHED-FORWARD-REFS**: In detached mode, ERD.md uses `→` forward references to trace requirements to specific code locations in the target repo (files and symbols).
+- <a id="P-ANCHORS-DETACHED-EXTERNAL"></a>**P-ANCHORS-DETACHED-EXTERNAL**: External detached mode: the anchors documents live in a separate repo from the code. The `repo` field identifies the target codebase (URL or local path), `ref` specifies the branch/tag/SHA, and `path` scopes to a subdirectory within that repo.
 
-- <a id="P-ANCHORS-DETACHED-INIT"></a>**P-ANCHORS-DETACHED-INIT**: Init for detached mode fetches the target repo for research and generates documents with forward references to code locations.
+- <a id="P-ANCHORS-DETACHED-FORWARD-REFS"></a>**P-ANCHORS-DETACHED-FORWARD-REFS**: In detached mode, ERD.md uses `→` forward references to trace requirements to specific code locations in the target codebase (files and symbols).
 
-- <a id="P-ANCHORS-DETACHED-AUDIT"></a>**P-ANCHORS-DETACHED-AUDIT**: Audit for detached mode fetches the target repo and validates that forward references resolve to real files and symbols.
+- <a id="P-ANCHORS-DETACHED-INIT"></a>**P-ANCHORS-DETACHED-INIT**: Init for detached mode researches the target codebase and generates documents with forward references to code locations.
+
+- <a id="P-ANCHORS-DETACHED-AUDIT"></a>**P-ANCHORS-DETACHED-AUDIT**: Audit for detached mode resolves the target codebase and validates that forward references resolve to real files and symbols.
 
 - <a id="P-ANCHORS-DETACHED-NO-TOUCH"></a>**P-ANCHORS-DETACHED-NO-TOUCH**: Detached mode never modifies the target codebase — no inline tags, no sidecar files, nothing.
 
-- <a id="P-ANCHORS-DETACHED-EMBED"></a>**P-ANCHORS-DETACHED-EMBED**: A detached module can be converted to embedded mode. The embed action adds inline requirement tags to source files based on the `→` forward references, removes the forward references from ERD.md, and removes the `repo`/`ref`/`path` fields from ANCHORS.md. This requires the target code to be locally accessible.
+- <a id="P-ANCHORS-DETACHED-EMBED"></a>**P-ANCHORS-DETACHED-EMBED**: A detached module can be converted to embedded mode. The embed action adds inline requirement tags to source files based on the `→` forward references, removes the forward references from ERD.md, and removes the detached-mode fields from ANCHORS.md. This requires the target code to be locally accessible.
 
 ---
 

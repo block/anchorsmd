@@ -14,9 +14,13 @@ see-also:
   ← [P-DAPI-RATE-LIMIT](PRODUCT.md#P-DAPI-RATE-LIMIT)
   → `src/auth/rate.go:RateLimit`
 
-- <a id="E-DAPI-BROKEN-REF"></a>**E-DAPI-BROKEN-REF**: This requirement has a broken forward ref for testing.
+- <a id="E-DAPI-BROKEN-FILE"></a>**E-DAPI-BROKEN-FILE**: This requirement has a broken forward ref (missing file) for testing.
   ← [P-DAPI-AUTH](PRODUCT.md#P-DAPI-AUTH)
   → `src/nonexistent.go:MissingFunc`
+
+- <a id="E-DAPI-BROKEN-SYMBOL"></a>**E-DAPI-BROKEN-SYMBOL**: This requirement has a broken forward ref (file exists, symbol missing) for testing.
+  ← [P-DAPI-AUTH](PRODUCT.md#P-DAPI-AUTH)
+  → `src/auth/verify.go:NonexistentSymbol`
 
 ## Open Questions
 

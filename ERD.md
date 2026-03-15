@@ -19,7 +19,7 @@ ANCHORS is implemented entirely as a Claude Code skill — a markdown instructio
 - <a id="E-ANCHORS-MARKER-FORMAT"></a>**E-ANCHORS-MARKER-FORMAT**: `ANCHORS.md` must contain YAML frontmatter with a `prefix` field. The prefix value is an uppercase string used to scope all requirement IDs in the module.
   ← [P-ANCHORS-PREFIX](PRODUCT.md#P-ANCHORS-PREFIX)
 
-- <a id="E-ANCHORS-DOC-LOCATIONS"></a>**E-ANCHORS-DOC-LOCATIONS**: The four documents (`PRODUCT.md`, `ERD.md`, `TESTING.md`, `DEPENDENCIES.md`) must be siblings of `ANCHORS.md` in the same directory.
+- <a id="E-ANCHORS-DOC-LOCATIONS"></a>**E-ANCHORS-DOC-LOCATIONS**: When present, the four documents (`PRODUCT.md`, `ERD.md`, `TESTING.md`, `DEPENDENCIES.md`) must be siblings of `ANCHORS.md` in the same directory. Not all four are required (see P-ANCHORS-MONO-PARTIAL).
   ← [P-ANCHORS-DOC-SET](PRODUCT.md#P-ANCHORS-DOC-SET)
 
 - <a id="E-ANCHORS-FRONTMATTER"></a>**E-ANCHORS-FRONTMATTER**: Each document includes YAML frontmatter with `scope` and `see-also` fields for self-documentation. Templates provide this structure.
@@ -130,10 +130,10 @@ ANCHORS is implemented entirely as a Claude Code skill — a markdown instructio
 
 ## 7. Routing Logic
 
-- <a id="E-ANCHORS-ROUTE-PARSE"></a>**E-ANCHORS-ROUTE-PARSE**: Argument parsing: no args → interactive mode, `init` → init mode (CWD), `init <path>` → init mode (given path), `audit` → audit mode, anything else → print usage.
+- <a id="E-ANCHORS-ROUTE-PARSE"></a>**E-ANCHORS-ROUTE-PARSE**: Argument parsing: no args → interactive mode, `init` → init mode (CWD), `init <path>` → init mode (given path), `audit` → audit mode, `embed` → embed mode (CWD), `embed <path>` → embed mode (given path), anything else → print usage.
   ← [P-ANCHORS-ROUTE-ARGS](PRODUCT.md#P-ANCHORS-ROUTE-ARGS)
 
-- <a id="E-ANCHORS-ROUTE-RECOMMEND"></a>**E-ANCHORS-ROUTE-RECOMMEND**: In interactive mode, if any `**/ANCHORS.md` exists in the repo, recommend Audit first. If none exist, recommend Init first. Use `AskUserQuestion` with two options.
+- <a id="E-ANCHORS-ROUTE-RECOMMEND"></a>**E-ANCHORS-ROUTE-RECOMMEND**: In interactive mode, if any `**/ANCHORS.md` exists in the repo, recommend Audit first. If none exist, recommend Init first. Show Embed as an option only if any module has `mode: detached`. Use `AskUserQuestion`.
   ← [P-ANCHORS-ROUTE-INTERACTIVE](PRODUCT.md#P-ANCHORS-ROUTE-INTERACTIVE)
 
 ---
@@ -168,32 +168,39 @@ ANCHORS is implemented entirely as a Claude Code skill — a markdown instructio
 
 ## 9. Detached Mode
 
-- <a id="E-ANCHORS-EMBEDDED-DEFAULT"></a>**E-ANCHORS-EMBEDDED-DEFAULT**: When `ANCHORS.md` frontmatter contains only `prefix` (no `repo` field), the module operates in embedded mode. All existing behavior applies: inline code tags, audit code search, init research against local files. This is the default and requires no additional configuration.
+- <a id="E-ANCHORS-EMBEDDED-DEFAULT"></a>**E-ANCHORS-EMBEDDED-DEFAULT**: When `ANCHORS.md` frontmatter contains no `mode` field (or any value other than `detached`), the module operates in embedded mode. All existing behavior applies: inline code tags, audit code search, init research against local files. This is the default and requires no additional configuration.
   ← [P-ANCHORS-MODE-EMBEDDED](PRODUCT.md#P-ANCHORS-MODE-EMBEDDED)
 
-- <a id="E-ANCHORS-DETACHED-FRONTMATTER"></a>**E-ANCHORS-DETACHED-FRONTMATTER**: In detached mode, `ANCHORS.md` frontmatter includes three additional fields: `repo` (GitHub URL or local path — required for detached mode), `ref` (branch, tag, or SHA — defaults to `main`), and `path` (subdirectory within the target repo — defaults to `/`).
-  ← [P-ANCHORS-DETACHED-POINTER](PRODUCT.md#P-ANCHORS-DETACHED-POINTER)
-
-- <a id="E-ANCHORS-DETACHED-MODE-DETECTION"></a>**E-ANCHORS-DETACHED-MODE-DETECTION**: The presence of the `repo` field in `ANCHORS.md` frontmatter triggers detached mode. Absence of `repo` means embedded mode. No explicit mode flag is needed.
+- <a id="E-ANCHORS-DETACHED-MODE-DETECTION"></a>**E-ANCHORS-DETACHED-MODE-DETECTION**: The `mode: detached` field in `ANCHORS.md` frontmatter triggers detached mode. This is an explicit behavioral flag — mode is not inferred from the presence or absence of other fields.
   ← [P-ANCHORS-MODE-DETACHED](PRODUCT.md#P-ANCHORS-MODE-DETACHED)
 
-- <a id="E-ANCHORS-DETACHED-CLONE"></a>**E-ANCHORS-DETACHED-CLONE**: Init and audit access the target codebase at the specified `repo` and `ref`. The method of access (clone, local path, API) is left to the runtime. The target should be cached for the duration of the session to avoid redundant fetches.
+- <a id="E-ANCHORS-DETACHED-IN-REPO-FRONTMATTER"></a>**E-ANCHORS-DETACHED-IN-REPO-FRONTMATTER**: In-repo detached frontmatter: `prefix` (required), `mode: detached` (required), `path` (required — relative to the ANCHORS.md file, locates the target code directory). No `repo` or `ref` fields.
+  ← [P-ANCHORS-DETACHED-IN-REPO](PRODUCT.md#P-ANCHORS-DETACHED-IN-REPO)
+
+- <a id="E-ANCHORS-DETACHED-EXTERNAL-FRONTMATTER"></a>**E-ANCHORS-DETACHED-EXTERNAL-FRONTMATTER**: External detached frontmatter: `prefix` (required), `mode: detached` (required), `repo` (required — GitHub URL or local path to the target codebase), `ref` (branch/tag/SHA — defaults to `main`), `path` (subdirectory within the target repo root — defaults to `/`).
+  ← [P-ANCHORS-DETACHED-EXTERNAL](PRODUCT.md#P-ANCHORS-DETACHED-EXTERNAL)
+
+- <a id="E-ANCHORS-DETACHED-PATH-RESOLUTION"></a>**E-ANCHORS-DETACHED-PATH-RESOLUTION**: The `path` field resolves differently depending on whether `repo` is present. **In-repo** (no `repo`): `path` is relative to the ANCHORS.md file, like embedded mode's implicit scoping. **External** (with `repo`): `path` is relative to the target repo root. This means in-repo detached uses the same spatial conventions as embedded mode — the anchors directory and the code are nearby in the same filesystem.
+  ← [P-ANCHORS-DETACHED-IN-REPO](PRODUCT.md#P-ANCHORS-DETACHED-IN-REPO)
+  ← [P-ANCHORS-DETACHED-EXTERNAL](PRODUCT.md#P-ANCHORS-DETACHED-EXTERNAL)
+
+- <a id="E-ANCHORS-DETACHED-TARGET-ACCESS"></a>**E-ANCHORS-DETACHED-TARGET-ACCESS**: Init and audit resolve the target codebase. **In-repo**: resolve `path` relative to ANCHORS.md and use the local filesystem directly. **External**: access the codebase at `repo` and `ref`, then scope to `path` (relative to repo root; defaults to `/`). External targets should be cached for the session to avoid redundant fetches.
   ← [P-ANCHORS-DETACHED-INIT](PRODUCT.md#P-ANCHORS-DETACHED-INIT)
   ← [P-ANCHORS-DETACHED-AUDIT](PRODUCT.md#P-ANCHORS-DETACHED-AUDIT)
 
-- <a id="E-ANCHORS-DETACHED-FORWARD-REF-FORMAT"></a>**E-ANCHORS-DETACHED-FORWARD-REF-FORMAT**: Forward references use `→` followed by backtick-wrapped `file:symbol` entries (e.g., `` → `src/auth/session.go:NewSession`, `src/auth/middleware.go:ValidateToken` ``). Multiple refs are comma-separated on one line.
+- <a id="E-ANCHORS-DETACHED-FORWARD-REF-FORMAT"></a>**E-ANCHORS-DETACHED-FORWARD-REF-FORMAT**: Forward references use `→` followed by backtick-wrapped `file:symbol` entries (e.g., `` → `src/auth/session.go:NewSession`, `src/auth/middleware.go:ValidateToken` ``). Multiple refs are comma-separated on one line. File paths are relative to the resolved target directory (the `path` directory, however it was resolved).
   ← [P-ANCHORS-DETACHED-FORWARD-REFS](PRODUCT.md#P-ANCHORS-DETACHED-FORWARD-REFS)
 
-- <a id="E-ANCHORS-DETACHED-FORWARD-REF-VALIDATION"></a>**E-ANCHORS-DETACHED-FORWARD-REF-VALIDATION**: Audit resolves each `→` reference against the cloned target: the file must exist at the specified ref, and the symbol should be findable via grep in that file. Broken refs (missing file or missing symbol) are reported in the audit gaps.
+- <a id="E-ANCHORS-DETACHED-FORWARD-REF-VALIDATION"></a>**E-ANCHORS-DETACHED-FORWARD-REF-VALIDATION**: Audit resolves each `→` reference against the target codebase: the file must exist within the resolved target directory, and the symbol should be findable via grep in that file. Broken refs (missing file or missing symbol) are reported in the audit gaps.
   ← [P-ANCHORS-DETACHED-AUDIT](PRODUCT.md#P-ANCHORS-DETACHED-AUDIT)
 
-- <a id="E-ANCHORS-DETACHED-INIT-RESEARCH"></a>**E-ANCHORS-DETACHED-INIT-RESEARCH**: Init clones the target repo and runs the same subagent research as embedded mode, but against the cloned copy (scoped to the `path` subdirectory if specified). Generated ERD.md includes `→` forward references to code locations discovered during research.
+- <a id="E-ANCHORS-DETACHED-INIT-RESEARCH"></a>**E-ANCHORS-DETACHED-INIT-RESEARCH**: Init resolves the target codebase and runs the same subagent research as embedded mode, scoped to the resolved target directory. Generated ERD.md includes `→` forward references to code locations discovered during research.
   ← [P-ANCHORS-DETACHED-INIT](PRODUCT.md#P-ANCHORS-DETACHED-INIT)
 
-- <a id="E-ANCHORS-DETACHED-NO-INLINE-TAGS"></a>**E-ANCHORS-DETACHED-NO-INLINE-TAGS**: In detached mode, audit does not search the target codebase for inline requirement tags (`P-*`, `E-*` in code comments). Traceability is purely via `→` forward references in the docs. The target repo is never modified.
+- <a id="E-ANCHORS-DETACHED-NO-INLINE-TAGS"></a>**E-ANCHORS-DETACHED-NO-INLINE-TAGS**: In detached mode, audit does not search the target codebase for inline requirement tags (`P-*`, `E-*` in code comments). Traceability is purely via `→` forward references in the docs. The target codebase is never modified.
   ← [P-ANCHORS-DETACHED-NO-TOUCH](PRODUCT.md#P-ANCHORS-DETACHED-NO-TOUCH)
 
-- <a id="E-ANCHORS-EMBED-PREREQ"></a>**E-ANCHORS-EMBED-PREREQ**: The embed action is only available for detached modules (ANCHORS.md has a `repo` field). If invoked on an embedded module, report an error. The target code must be locally accessible — if `repo` is a remote URL, the code must already be present locally (e.g., the user forked/cloned it and the docs are now in the same repo or a sibling directory). The embed action prompts for the local code path if it cannot be resolved automatically.
+- <a id="E-ANCHORS-EMBED-PREREQ"></a>**E-ANCHORS-EMBED-PREREQ**: The embed action is only available for detached modules (`mode: detached` in ANCHORS.md). If invoked on an embedded module, report an error. The target code must be locally accessible. **In-repo**: resolve `path` relative to ANCHORS.md — the code is already local. **External**: if `repo` is a local path, use it directly; if `repo` is a remote URL, prompt for the local path.
   ← [P-ANCHORS-DETACHED-EMBED](PRODUCT.md#P-ANCHORS-DETACHED-EMBED)
 
 - <a id="E-ANCHORS-EMBED-INLINE-TAGS"></a>**E-ANCHORS-EMBED-INLINE-TAGS**: For each `→` forward reference in ERD.md, the embed action locates the referenced file and symbol in the local code, and adds an inline requirement tag comment (e.g., `// E-AUTH-SESSION: ...`) to the function or symbol. Tags follow the standard code traceability format: one tag per function, augmenting existing comments.
@@ -202,7 +209,7 @@ ANCHORS is implemented entirely as a Claude Code skill — a markdown instructio
 - <a id="E-ANCHORS-EMBED-STRIP-FORWARD-REFS"></a>**E-ANCHORS-EMBED-STRIP-FORWARD-REFS**: After adding inline tags, the embed action removes all `→` lines from ERD.md. The `←` backlinks are preserved.
   ← [P-ANCHORS-DETACHED-EMBED](PRODUCT.md#P-ANCHORS-DETACHED-EMBED)
 
-- <a id="E-ANCHORS-EMBED-STRIP-FRONTMATTER"></a>**E-ANCHORS-EMBED-STRIP-FRONTMATTER**: The embed action removes the `repo`, `ref`, and `path` fields from ANCHORS.md frontmatter, leaving only `prefix`. This switches the module to embedded mode.
+- <a id="E-ANCHORS-EMBED-STRIP-FRONTMATTER"></a>**E-ANCHORS-EMBED-STRIP-FRONTMATTER**: The embed action removes the `mode`, `repo`, `ref`, and `path` fields from ANCHORS.md frontmatter, leaving only `prefix`. This switches the module to embedded mode.
   ← [P-ANCHORS-DETACHED-EMBED](PRODUCT.md#P-ANCHORS-DETACHED-EMBED)
 
 ---
