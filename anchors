@@ -1,0 +1,669 @@
+#!/bin/bash
+# anchors — CLI for the ANCHORS requirements-driven development framework
+# E-ANCHORS-CLI-SUBCOMMANDS: dispatches to install, setup, check, upgrade subcommands
+set -eo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILL_SOURCE="${SCRIPT_DIR}/skill"
+SKILL_NAME="anchors"
+
+ANCHORS_SECTION='## ANCHORS
+
+This repo uses ANCHORS for requirements-driven development. Always load the anchors skill (`/anchors`) before making changes.'
+
+# --- Shared helpers ---
+
+# E-ANCHORS-CLI-INSTRUCTIONS-DIRECT: append ANCHORS section to agent instructions
+append_agent_instructions() {
+  local agents_md="AGENTS.md"
+  local claude_md="CLAUDE.md"
+  local agents_exists=false
+  local claude_exists=false
+  local agents_is_symlink_to_claude=false
+  local claude_is_symlink_to_agents=false
+
+  [ -e "${agents_md}" ] && agents_exists=true
+  [ -e "${claude_md}" ] && claude_exists=true
+
+  if [ -L "${agents_md}" ] && [ "$(readlink "${agents_md}")" = "${claude_md}" ]; then
+    agents_is_symlink_to_claude=true
+  fi
+  if [ -L "${claude_md}" ] && [ "$(readlink "${claude_md}")" = "${agents_md}" ]; then
+    claude_is_symlink_to_agents=true
+  fi
+
+  append_if_missing() {
+    local file="$1"
+    if grep -qF '## ANCHORS' "$file" 2>/dev/null; then
+      echo "ANCHORS section already present in ${file}, skipping."
+      return
+    fi
+    printf '\n%s\n' "${ANCHORS_SECTION}" >> "$file"
+    echo "Appended ANCHORS section to ${file}"
+  }
+
+  if $agents_exists && $claude_exists; then
+    if $agents_is_symlink_to_claude; then
+      append_if_missing "${claude_md}"
+    elif $claude_is_symlink_to_agents; then
+      append_if_missing "${agents_md}"
+    else
+      append_if_missing "${agents_md}"
+      append_if_missing "${claude_md}"
+    fi
+  elif $agents_exists; then
+    append_if_missing "${agents_md}"
+  elif $claude_exists; then
+    append_if_missing "${claude_md}"
+  else
+    printf '%s\n' "${ANCHORS_SECTION}" > "${agents_md}"
+    echo "Created ${agents_md} with ANCHORS section"
+  fi
+}
+
+# E-ANCHORS-CLI-AGENT-DETECT: detect agent from flags or repo structure
+detect_agent() {
+  local agent_flag="${1:-}"
+  if [ -n "${agent_flag}" ]; then
+    echo "${agent_flag}"
+    return
+  fi
+  if [ -d ".claude" ]; then
+    echo "claude"
+  elif [ -d ".agents" ]; then
+    echo "amp"
+  elif [ -d "ai-rules" ]; then
+    echo "airules"
+  else
+    echo ""
+  fi
+}
+
+# E-ANCHORS-CLI-SKILL-TARGET-DIRS: map agent to project-level skill path
+skill_target_dir() {
+  local agent="$1"
+  case "${agent}" in
+    claude)  echo ".claude/skills/${SKILL_NAME}" ;;
+    amp)     echo ".agents/skills/${SKILL_NAME}" ;;
+    codex)   echo ".agents/skills/${SKILL_NAME}" ;;
+    airules) echo "ai-rules/skills/${SKILL_NAME}" ;;
+    *) echo "Error: Unknown agent '${agent}'." >&2; return 1 ;;
+  esac
+}
+
+# E-ANCHORS-CLI-SKILL-REPLACE: install skill files to target location
+install_skill() {
+  local agent="$1"
+  local target_dir
+  target_dir="$(skill_target_dir "${agent}")"
+
+  # Check if already installed
+  if [ -d "${target_dir}" ] && [ -f "${target_dir}/SKILL.md" ]; then
+    echo "Skill already installed at ${target_dir}, skipping."
+    return 0
+  fi
+
+  # E-ANCHORS-CLI-AIRULES-CHECKS: validate ai-rules prerequisites
+  if [ "${agent}" = "airules" ]; then
+    if ! command -v ai-rules &>/dev/null; then
+      echo "Error: ai-rules CLI not found." >&2
+      echo "Install it: curl -fsSL https://raw.githubusercontent.com/block/ai-rules/main/scripts/install.sh | bash" >&2
+      return 1
+    fi
+    if [ ! -d "ai-rules" ]; then
+      echo "Error: No ai-rules/ directory found in the current project." >&2
+      echo "Run 'ai-rules init' first to set up ai-rules in this project." >&2
+      return 1
+    fi
+  fi
+
+  # Remove existing and copy
+  if [ -e "${target_dir}" ] || [ -L "${target_dir}" ]; then
+    rm -rf "${target_dir}"
+  fi
+  mkdir -p "$(dirname "${target_dir}")"
+  cp -R "${SKILL_SOURCE}" "${target_dir}"
+  echo "Installed ANCHORS skill to ${target_dir}"
+
+  # Agent instructions
+  if [ "${agent}" = "airules" ]; then
+    # E-ANCHORS-CLI-INSTRUCTIONS-AIRULES: create ai-rules rule file
+    if [ ! -e "ai-rules/anchors.md" ]; then
+      printf '%s\n' "${ANCHORS_SECTION}" > "ai-rules/anchors.md"
+      echo "Created ai-rules/anchors.md"
+    fi
+    echo "Running ai-rules generate..."
+    ai-rules generate
+  else
+    append_agent_instructions
+  fi
+}
+
+# E-ANCHORS-SETUP-PREFIX-UNIQUE: check prefix uniqueness across repo
+check_prefix_unique() {
+  local prefix="$1"
+  local target_dir="$2"
+  local collision_found=false
+
+  while IFS= read -r anchors_file; do
+    local dir
+    dir="$(dirname "${anchors_file}")"
+    # Skip the target directory itself (if it exists yet)
+    if [ -d "${target_dir}" ] && [ "$(cd "${dir}" && pwd)" = "$(cd "${target_dir}" && pwd)" ] 2>/dev/null; then
+      continue
+    fi
+    local existing_prefix
+    existing_prefix="$(grep -E '^prefix:' "${anchors_file}" 2>/dev/null | head -1 | sed 's/^prefix:[[:space:]]*//' || true)"
+    if [ "${existing_prefix}" = "${prefix}" ]; then
+      echo "Error: Prefix '${prefix}' already used by module at ${dir}" >&2
+      collision_found=true
+    fi
+  done < <(find . -name ANCHORS.md -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/vendor/*' 2>/dev/null)
+
+  if $collision_found; then
+    return 1
+  fi
+}
+
+# --- Subcommands ---
+
+# E-ANCHORS-CLI-INSTALL: install subcommand — one-time repo setup
+cmd_install() {
+  local agent_flag=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --agent) agent_flag="$2"; shift 2 ;;
+      -*) echo "Error: Unknown option '$1'" >&2; return 1 ;;
+      *) echo "Error: Unexpected argument '$1'" >&2; return 1 ;;
+    esac
+  done
+
+  local agent
+  agent="$(detect_agent "${agent_flag}")"
+  if [ -z "${agent}" ]; then
+    echo "Error: Could not detect agent. Use --agent to specify (claude, amp, codex, airules)." >&2
+    return 1
+  fi
+  install_skill "${agent}"
+}
+
+# E-ANCHORS-CLI-SETUP-FLOW: setup subcommand — scaffold docs in a directory
+cmd_setup() {
+  local prefix=""
+  local mode="embedded"
+  local skip_existing=false
+  local target_code_path=""
+  local target_repo=""
+  local target_ref=""
+  local target_path=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --prefix) prefix="$2"; shift 2 ;;
+      --mode) mode="$2"; shift 2 ;;
+      --skip-existing) skip_existing=true; shift ;;
+      --path) target_code_path="$2"; shift 2 ;;
+      --repo) target_repo="$2"; shift 2 ;;
+      --ref) target_ref="$2"; shift 2 ;;
+      -*) echo "Error: Unknown option '$1'" >&2; return 1 ;;
+      *) target_path="$1"; shift ;;
+    esac
+  done
+
+  # Default target to CWD
+  if [ -z "${target_path}" ]; then
+    target_path="."
+  fi
+
+  # Prefix is required
+  if [ -z "${prefix}" ]; then
+    echo "Error: --prefix is required." >&2
+    echo "Usage: anchors setup [--prefix PREFIX] [--mode MODE] [path]" >&2
+    return 1
+  fi
+
+  # Check prefix uniqueness
+  check_prefix_unique "${prefix}" "${target_path}" || return 1
+
+  # Create target directory if needed
+  mkdir -p "${target_path}"
+
+  # E-ANCHORS-CLI-SCAFFOLD: create document skeleton files
+  local created=0
+
+  # ANCHORS.md
+  local anchors_file="${target_path}/ANCHORS.md"
+  if [ -f "${anchors_file}" ] && $skip_existing; then
+    echo "Skipping existing ${anchors_file}"
+  else
+    local frontmatter="---\nprefix: ${prefix}\n"
+    if [ "${mode}" = "detached" ]; then
+      frontmatter+="mode: detached\n"
+      if [ -n "${target_repo}" ]; then
+        frontmatter+="repo: ${target_repo}\n"
+        frontmatter+="ref: ${target_ref:-main}\n"
+      fi
+      if [ -n "${target_code_path}" ]; then
+        frontmatter+="path: ${target_code_path}\n"
+      fi
+    fi
+    frontmatter+="---"
+    printf '%b\n' "${frontmatter}" > "${anchors_file}"
+    created=$((created + 1))
+  fi
+
+  # PRODUCT.md
+  local product_file="${target_path}/PRODUCT.md"
+  if [ -f "${product_file}" ] && $skip_existing; then
+    echo "Skipping existing ${product_file}"
+  else
+    cat > "${product_file}" << 'TEMPLATE'
+---
+scope: Product requirements — user-facing behavior, workflows, and experience.
+see-also:
+  - ERD.md — technical requirements derived from this document.
+  - TESTING.md — testing strategy covering these requirements.
+  - DEPENDENCIES.md — external dependencies the system cannot supply itself.
+---
+
+# Product Requirements
+
+## Overview
+
+---
+
+## Open Questions
+
+(none)
+
+## Resolved Questions
+TEMPLATE
+    created=$((created + 1))
+  fi
+
+  # ERD.md
+  local erd_file="${target_path}/ERD.md"
+  if [ -f "${erd_file}" ] && $skip_existing; then
+    echo "Skipping existing ${erd_file}"
+  else
+    cat > "${erd_file}" << 'TEMPLATE'
+---
+scope: Engineering requirements — technical design, interfaces, and implementation constraints. Derived from product requirements.
+see-also:
+  - PRODUCT.md — product requirements that drive the technical decisions in this document.
+  - TESTING.md — testing strategy covering these requirements.
+  - DEPENDENCIES.md — external dependencies that the system cannot supply itself.
+---
+
+# Engineering Requirements
+
+---
+
+## Open Questions
+
+(none)
+
+## Resolved Questions
+TEMPLATE
+    created=$((created + 1))
+  fi
+
+  # TESTING.md
+  local testing_file="${target_path}/TESTING.md"
+  if [ -f "${testing_file}" ] && $skip_existing; then
+    echo "Skipping existing ${testing_file}"
+  else
+    cat > "${testing_file}" << 'TEMPLATE'
+---
+scope: Automated testing strategy — test pyramid, tooling, and coverage targets.
+see-also:
+  - PRODUCT.md — product requirements that define acceptance criteria.
+  - ERD.md — technical requirements and interfaces under test.
+---
+
+# Testing Strategy
+TEMPLATE
+    created=$((created + 1))
+  fi
+
+  # DEPENDENCIES.md
+  local deps_file="${target_path}/DEPENDENCIES.md"
+  if [ -f "${deps_file}" ] && $skip_existing; then
+    echo "Skipping existing ${deps_file}"
+  else
+    cat > "${deps_file}" << 'TEMPLATE'
+---
+scope: External dependencies — tools and services that must be present in the environment because the system cannot supply them itself.
+see-also:
+  - ERD.md — engineering requirements, including managed toolchains that eliminate would-be dependencies.
+  - PRODUCT.md — product requirements that drive deployment modes.
+---
+
+# External Dependencies
+TEMPLATE
+    created=$((created + 1))
+  fi
+
+  echo "Scaffolded ${created} document(s) in ${target_path}"
+}
+
+# E-ANCHORS-CLI-CHECK-STRUCTURAL: check subcommand
+cmd_check() {
+  local module_path=""
+
+  # Accept required path argument
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -*) echo "Error: Unknown option '$1'" >&2; return 1 ;;
+      *) module_path="$1"; shift ;;
+    esac
+  done
+
+  if [ -z "${module_path}" ]; then
+    echo "Error: path is required." >&2
+    echo "Usage: anchors check <path>" >&2
+    return 1
+  fi
+
+  if [ ! -f "${module_path}/ANCHORS.md" ]; then
+    echo "Error: No ANCHORS.md found in ${module_path}" >&2
+    return 1
+  fi
+
+  local errors=0
+  local warnings=0
+  local modules=()
+  local prefixes=()
+  local module_dirs=()
+
+  # Read the specified module
+  local dir="${module_path}"
+  local prefix
+  prefix="$(grep -E '^prefix:' "${dir}/ANCHORS.md" 2>/dev/null | head -1 | sed 's/^prefix:[[:space:]]*//' || true)"
+  if [ -z "${prefix}" ]; then
+    echo "Error: ${dir}/ANCHORS.md has no prefix field" >&2
+    return 1
+  fi
+  modules+=("${dir}:${prefix}")
+  prefixes+=("${prefix}")
+  module_dirs+=("${dir}")
+
+  if [ ${#modules[@]} -eq 0 ]; then
+    echo "No ANCHORS modules found."
+    return 0
+  fi
+
+  echo "## ANCHORS Check Report"
+  echo ""
+  echo "### Module"
+
+  for i in "${!modules[@]}"; do
+    local dir="${module_dirs[$i]}"
+    local prefix="${prefixes[$i]}"
+
+    # Check document presence
+    local doc_count=0
+    local missing_docs=()
+    for doc in PRODUCT.md ERD.md TESTING.md DEPENDENCIES.md; do
+      if [ -f "${dir}/${doc}" ]; then
+        doc_count=$((doc_count + 1))
+      else
+        missing_docs+=("${doc}")
+      fi
+    done
+
+    # Check detached mode
+    local mode_info=""
+    if grep -q 'mode: detached' "${dir}/ANCHORS.md" 2>/dev/null; then
+      local dpath
+      dpath="$(grep -E '^path:' "${dir}/ANCHORS.md" 2>/dev/null | head -1 | sed 's/^path:[[:space:]]*//' || true)"
+      local drepo
+      drepo="$(grep -E '^repo:' "${dir}/ANCHORS.md" 2>/dev/null | head -1 | sed 's/^repo:[[:space:]]*//' || true)"
+      if [ -n "${drepo}" ]; then
+        local dref
+        dref="$(grep -E '^ref:' "${dir}/ANCHORS.md" 2>/dev/null | head -1 | sed 's/^ref:[[:space:]]*//' || true)"
+        mode_info=", detached → ${drepo}@${dref:-main}"
+      elif [ -n "${dpath}" ]; then
+        mode_info=", detached → ${dpath}"
+      else
+        mode_info=", detached"
+      fi
+    fi
+
+    local missing_info=""
+    if [ ${#missing_docs[@]} -gt 0 ]; then
+      missing_info=" (no $(IFS=', '; echo "${missing_docs[*]}"))"
+    fi
+    echo "- ${dir} (prefix: ${prefix}${mode_info}) — ${doc_count}/4 documents${missing_info}"
+  done
+
+  echo ""
+  echo "### Traceability"
+
+  # Per-module checks
+  local total_e=0
+  local total_e_with_backlink=0
+  local total_p=0
+  local total_p_covered=0
+  local missing_backlinks=()
+  local uncovered_prd=()
+  local open_questions=()
+
+  for i in "${!modules[@]}"; do
+    local dir="${module_dirs[$i]}"
+    local prefix="${prefixes[$i]}"
+
+    # Extract P-* IDs
+    local p_ids=()
+    if [ -f "${dir}/PRODUCT.md" ]; then
+      while IFS= read -r pid; do
+        [ -z "${pid}" ] && continue
+        p_ids+=("${pid}")
+      done < <(grep -oE 'id="P-[A-Z0-9-]+"' "${dir}/PRODUCT.md" 2>/dev/null | sed 's/id="//;s/"//' || true)
+    fi
+    total_p=$((total_p + ${#p_ids[@]}))
+
+    # Extract E-* IDs and check backlinks
+    local e_ids=()
+    if [ -f "${dir}/ERD.md" ]; then
+      while IFS= read -r eid; do
+        [ -z "${eid}" ] && continue
+        e_ids+=("${eid}")
+        total_e=$((total_e + 1))
+        # Check for backlink within 5 lines after the ID
+        if grep -A5 "id=\"${eid}\"" "${dir}/ERD.md" 2>/dev/null | grep -q '←.*\[P-'; then
+          total_e_with_backlink=$((total_e_with_backlink + 1))
+        else
+          missing_backlinks+=("${prefix}: ${eid}")
+          errors=$((errors + 1))
+        fi
+      done < <(grep -oE 'id="E-[A-Z0-9-]+"' "${dir}/ERD.md" 2>/dev/null | sed 's/id="//;s/"//' || true)
+    fi
+
+    # Check PRD coverage
+    for pid in "${p_ids[@]+"${p_ids[@]}"}"; do
+      if [ -f "${dir}/ERD.md" ] && grep -q "${pid}" "${dir}/ERD.md" 2>/dev/null; then
+        total_p_covered=$((total_p_covered + 1))
+      else
+        uncovered_prd+=("${prefix}: ${pid}")
+        errors=$((errors + 1))
+      fi
+    done
+
+    # Check for open questions — match **OPEN-* pattern (the documented format)
+    # Skip: resolved (~~OPEN-), backtick-quoted (`OPEN-*`), inside HTML anchors, requirement IDs containing OPEN-
+    for doc in PRODUCT.md ERD.md TESTING.md DEPENDENCIES.md; do
+      if [ -f "${dir}/${doc}" ]; then
+        while IFS= read -r oq; do
+          [ -z "${oq}" ] && continue
+          open_questions+=("${dir}/${doc}: ${oq}")
+        done < <(grep -oE '\*\*OPEN-[A-Z0-9-]+\*\*' "${dir}/${doc}" 2>/dev/null | grep -v '~~' 2>/dev/null | sed 's/\*\*//g' || true)
+      fi
+    done
+
+    # Check forward references for detached modules
+    if grep -q 'mode: detached' "${dir}/ANCHORS.md" 2>/dev/null && [ -f "${dir}/ERD.md" ]; then
+      local dpath
+      dpath="$(grep -E '^path:' "${dir}/ANCHORS.md" 2>/dev/null | head -1 | sed 's/^path:[[:space:]]*//' || true)"
+      if [ -n "${dpath}" ]; then
+        local resolved_target
+        if [ "${dpath:0:1}" = "/" ]; then
+          resolved_target="${dpath}"
+        else
+          resolved_target="$(cd "${dir}" && cd "${dpath}" 2>/dev/null && pwd)" || resolved_target=""
+        fi
+        if [ -n "${resolved_target}" ]; then
+          while IFS= read -r fref_line; do
+            # Extract file:symbol pairs from → lines
+            local refs
+            refs="$(echo "${fref_line}" | grep -oE '`[^`]+:[^`]+`' || true)"
+            for ref in ${refs}; do
+              local clean_ref
+              clean_ref="$(echo "${ref}" | tr -d '`')"
+              local ref_file="${clean_ref%%:*}"
+              local ref_symbol="${clean_ref#*:}"
+              if [ ! -f "${resolved_target}/${ref_file}" ]; then
+                echo "  Broken forward ref: ${clean_ref} (file not found)" >&2
+                errors=$((errors + 1))
+              elif ! grep -q "${ref_symbol}" "${resolved_target}/${ref_file}" 2>/dev/null; then
+                echo "  Broken forward ref: ${clean_ref} (symbol not found)" >&2
+                errors=$((errors + 1))
+              fi
+            done
+          done < <(grep '^  →' "${dir}/ERD.md" 2>/dev/null || true)
+        fi
+      fi
+    fi
+  done
+
+  echo "- ERD → PRD backlinks: ${total_e_with_backlink}/${total_e}$([ ${total_e} -gt 0 ] && [ ${total_e_with_backlink} -lt ${total_e} ] && echo " ($(( total_e - total_e_with_backlink )) missing)" || true)"
+  echo "- PRD coverage by ERD: ${total_p_covered}/${total_p}$([ ${total_p} -gt 0 ] && [ ${total_p_covered} -eq ${total_p} ] && echo " (100%)" || true)"
+
+  # Print gaps
+  echo ""
+  echo "### Gaps"
+
+  if [ ${#missing_backlinks[@]} -gt 0 ]; then
+    echo ""
+    echo "#### Missing ERD Backlinks"
+    for bl in "${missing_backlinks[@]}"; do
+      echo "- ${bl} (no ← P-* link)"
+    done
+  fi
+
+  if [ ${#uncovered_prd[@]} -gt 0 ]; then
+    echo ""
+    echo "#### Uncovered Product Requirements"
+    for up in "${uncovered_prd[@]}"; do
+      echo "- ${up}"
+    done
+  fi
+
+  if [ ${#open_questions[@]} -gt 0 ]; then
+    echo ""
+    echo "#### Open Questions"
+    for oq in "${open_questions[@]}"; do
+      echo "- ${oq}"
+    done
+  fi
+
+  if [ ${#missing_backlinks[@]} -eq 0 ] && [ ${#uncovered_prd[@]} -eq 0 ] && [ ${#open_questions[@]} -eq 0 ]; then
+    echo ""
+    echo "(none)"
+  fi
+
+  echo ""
+  if [ ${errors} -gt 0 ]; then
+    echo "${errors} error(s), ${warnings} warning(s)"
+    return 1
+  else
+    echo "${warnings} warning(s), no errors"
+    return 0
+  fi
+}
+
+# E-ANCHORS-CLI-UPGRADE: upgrade subcommand
+cmd_upgrade() {
+  local agent_flag=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --agent) agent_flag="$2"; shift 2 ;;
+      *) echo "Error: Unknown option '$1'" >&2; return 1 ;;
+    esac
+  done
+
+  local agent
+  agent="$(detect_agent "${agent_flag}")"
+  if [ -z "${agent}" ]; then
+    echo "Error: Could not detect agent. Use --agent to specify (claude, amp, codex, airules)." >&2
+    return 1
+  fi
+
+  local target_dir
+  target_dir="$(skill_target_dir "${agent}")"
+
+  if [ ! -d "${target_dir}" ]; then
+    echo "Error: No skill found at ${target_dir}. Run 'anchors install' first." >&2
+    return 1
+  fi
+
+  rm -rf "${target_dir}"
+  mkdir -p "$(dirname "${target_dir}")"
+  cp -R "${SKILL_SOURCE}" "${target_dir}"
+  echo "Upgraded ANCHORS skill at ${target_dir}"
+
+  if [ "${agent}" = "airules" ]; then
+    echo "Running ai-rules generate..."
+    ai-rules generate
+  fi
+}
+
+# --- Usage ---
+
+usage() {
+  echo "Usage: anchors <command> [options]"
+  echo ""
+  echo "Commands:"
+  echo "  install           Install the ANCHORS skill and agent instructions in this repo"
+  echo "  setup [path]      Scaffold ANCHORS document skeletons in a directory"
+  echo "  check <path>      Check traceability and consistency of a module"
+  echo "  upgrade           Update the skill files to the latest version"
+  echo ""
+  echo "Install options:"
+  echo "  --agent AGENT      claude, amp, codex, or airules (auto-detected if omitted)"
+  echo ""
+  echo "Setup options:"
+  echo "  --prefix PREFIX    Requirement ID prefix (required)"
+  echo "  --mode MODE        embedded (default) or detached"
+  echo "  --skip-existing    Only create missing files, don't overwrite"
+  echo "  --path PATH        Path to target code, relative to ANCHORS.md (detached mode)"
+  echo "  --repo REPO        Target repo URL/path (external detached)"
+  echo "  --ref REF          Target ref/branch (external detached, default: main)"
+  echo ""
+  echo "Examples:"
+  echo "  anchors install --agent claude"
+  echo "  anchors setup ./payments --prefix PAY"
+  echo "  anchors setup apps/penpal/anchors --prefix PENPAL --mode detached --path .."
+  echo "  anchors check ."
+  echo "  anchors upgrade"
+}
+
+# --- Main dispatch ---
+
+if [[ $# -eq 0 ]]; then
+  usage
+  exit 1
+fi
+
+command="$1"
+shift
+
+case "${command}" in
+  install) cmd_install "$@" ;;
+  setup)   cmd_setup "$@" ;;
+  check)   cmd_check "$@" ;;
+  upgrade) cmd_upgrade "$@" ;;
+  help|--help|-h) usage ;;
+  *) echo "Error: Unknown command '${command}'" >&2; usage; exit 1 ;;
+esac

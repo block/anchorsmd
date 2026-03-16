@@ -41,11 +41,4 @@ assert_grep "D-DEP has Used by field" '^\- \*\*Used by:\*\*' "$FIXTURE/DEPENDENC
 assert_grep "D-DEP has Where it runs field" '^\- \*\*Where it runs:\*\*' "$FIXTURE/DEPENDENCIES.md"
 assert_grep "D-DEP has Why external field" '^\- \*\*Why external:\*\*' "$FIXTURE/DEPENDENCIES.md"
 
-echo "  [5] Template P-ID and E-ID formats match documented convention"
-# Templates should show the canonical format
-assert_grep "PRODUCT template uses <a id> format" '<a id="P-' "$TEMPLATES_DIR/PRODUCT.md"
-assert_grep "ERD template uses <a id> format" '<a id="E-' "$TEMPLATES_DIR/ERD.md"
-assert_grep "ERD template shows ← backlink" '← \[P-' "$TEMPLATES_DIR/ERD.md"
-assert_grep "DEPENDENCIES template uses ### D-DEP- format" '### D-DEP-' "$TEMPLATES_DIR/DEPENDENCIES.md"
-
 finish_tests

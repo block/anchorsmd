@@ -1,7 +1,7 @@
 #!/bin/bash
 # Layer 1: Unit / Static — SKILL.md Consistency
-# Verifies SKILL.md is structurally complete: routing table, template references,
-# audit report format, framework concepts, and frontmatter.
+# Verifies SKILL.md is structurally complete: routing table,
+# check report format, framework concepts, and frontmatter.
 # Validates TESTING.md §1.2
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"
@@ -9,23 +9,14 @@ source "$(dirname "$0")/helpers.sh"
 echo "  [1.2.1] Routing table matches documented modes"
 # E-ANCHORS-ROUTE-PARSE: SKILL.md must document all routing entries
 assert_grep "SKILL.md documents interactive mode" 'no args.*Interactive|Interactive.*no args' "$SKILL_FILE"
-assert_grep "SKILL.md documents init mode" '/anchors init' "$SKILL_FILE"
-assert_grep "SKILL.md documents init with path" 'init.*path|init <path>' "$SKILL_FILE"
-assert_grep "SKILL.md documents audit mode" '/anchors audit' "$SKILL_FILE"
+assert_grep "SKILL.md documents setup mode" '/anchors setup' "$SKILL_FILE"
+assert_grep "SKILL.md documents setup with path" 'setup.*path|setup <path>' "$SKILL_FILE"
+assert_grep "SKILL.md documents check mode" '/anchors check' "$SKILL_FILE"
 assert_grep "SKILL.md documents embed mode" '/anchors embed' "$SKILL_FILE"
 assert_grep "SKILL.md documents embed with path" 'embed.*path' "$SKILL_FILE"
 
-echo "  [1.2.2] Template paths in SKILL.md match actual files"
-# Init instructions must name each template file explicitly (not just the directory)
-# so the LLM reads all four when generating documents. A generic "templates/" reference
-# risks skipping a template. Each named file must also exist on disk.
-for tmpl in PRODUCT.md ERD.md TESTING.md DEPENDENCIES.md; do
-  assert_grep "SKILL.md references template ${tmpl}" "templates/${tmpl}" "$SKILL_FILE"
-  assert_file_exists "Template ${tmpl} exists" "$TEMPLATES_DIR/$tmpl"
-done
-
-echo "  [1.2.3] Audit report format includes all gap categories"
-# E-ANCHORS-AUDIT-REPORT-FORMAT: the example report must include every gap category
+echo "  [1.2.2] Check report format includes all gap categories"
+# E-ANCHORS-CHECK-REPORT-FORMAT: the example report must include every gap category
 assert_grep "Report has Modules section" '### Modules' "$SKILL_FILE"
 assert_grep "Report has Traceability section" '### Traceability' "$SKILL_FILE"
 assert_grep "Report has Gaps section" '### Gaps' "$SKILL_FILE"

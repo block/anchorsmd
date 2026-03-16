@@ -10,7 +10,7 @@ see-also:
 
 This document defines the technical requirements for the ANCHORS skill. These are derived from the [product requirements](PRODUCT.md).
 
-ANCHORS is implemented entirely as a Claude Code skill — a markdown instruction file (`SKILL.md`) plus templates. There is no compiled code. The "implementation" is the LLM following the instructions in `SKILL.md`. This shapes the ERD: requirements describe document formats, algorithms the LLM must follow, and file system conventions rather than traditional code interfaces.
+ANCHORS consists of two components: an `anchors` CLI (bash script with subcommands) for deterministic operations, and a Claude Code skill (`SKILL.md` plus templates) for LLM-powered operations. The CLI handles scaffolding, structural linting, and skill file management. The skill handles codebase research, content population, semantic analysis, and interactive workflows. The skill invokes the CLI for its deterministic steps.
 
 ---
 
@@ -53,65 +53,68 @@ ANCHORS is implemented entirely as a Claude Code skill — a markdown instructio
 
 ---
 
-## 4. Init Algorithm
+## 4. Setup Algorithm
 
-- <a id="E-ANCHORS-INIT-PATH-RESOLUTION"></a>**E-ANCHORS-INIT-PATH-RESOLUTION**: Path resolution follows: (1) explicit path argument → use it, (2) no argument and CWD has no `ANCHORS.md` → use CWD, (3) no argument and CWD has `ANCHORS.md` → prompt user with suggested subdirectories.
-  ← [P-ANCHORS-INIT-PATH](PRODUCT.md#P-ANCHORS-INIT-PATH)
+- <a id="E-ANCHORS-SETUP-PATH-RESOLUTION"></a>**E-ANCHORS-SETUP-PATH-RESOLUTION**: Path resolution follows: (1) explicit path argument → use it, (2) no argument and CWD has no `ANCHORS.md` → use CWD, (3) no argument and CWD has `ANCHORS.md` → prompt user with suggested subdirectories.
+  ← [P-ANCHORS-SETUP-PATH](PRODUCT.md#P-ANCHORS-SETUP-PATH)
 
-- <a id="E-ANCHORS-INIT-CONFLICT-CHECK"></a>**E-ANCHORS-INIT-CONFLICT-CHECK**: Before writing, glob the target directory for all five filenames. If any exist, prompt: "Skip existing" (only create missing) or "Overwrite all" (replace everything).
-  ← [P-ANCHORS-INIT-EXISTING](PRODUCT.md#P-ANCHORS-INIT-EXISTING)
+- <a id="E-ANCHORS-SETUP-CONFLICT-CHECK"></a>**E-ANCHORS-SETUP-CONFLICT-CHECK**: Before writing, glob the target directory for all five filenames. If any exist, prompt: "Skip existing" (only create missing) or "Overwrite all" (replace everything).
+  ← [P-ANCHORS-SETUP-EXISTING](PRODUCT.md#P-ANCHORS-SETUP-EXISTING)
 
-- <a id="E-ANCHORS-INIT-RESEARCH"></a>**E-ANCHORS-INIT-RESEARCH**: For existing codebases, launch parallel subagents to exhaustively research functional areas, technical architecture, external dependencies, and testing. Each subagent returns structured findings (not raw source code) to protect context. Tests are weighted heavily — tested behaviors are stronger requirement signals than implementation details. For greenfield projects, generate from the user's project description. Templates in the `templates/` directory (sibling of `SKILL.md`) are read as structural references to guide document format and ID conventions — they are never copied into the project.
-  ← [P-ANCHORS-INIT-SCAFFOLD](PRODUCT.md#P-ANCHORS-INIT-SCAFFOLD)
+- <a id="E-ANCHORS-SETUP-RESEARCH"></a>**E-ANCHORS-SETUP-RESEARCH**: For existing codebases, launch parallel subagents to exhaustively research functional areas, technical architecture, external dependencies, and testing. Each subagent returns structured findings (not raw source code) to protect context. Tests are weighted heavily — tested behaviors are stronger requirement signals than implementation details. For greenfield projects, generate from the user's project description. The document format conventions described in SKILL.md's framework section guide the structure of the generated content.
+  ← [P-ANCHORS-SETUP-SCAFFOLD](PRODUCT.md#P-ANCHORS-SETUP-SCAFFOLD)
 
-- <a id="E-ANCHORS-INIT-DEFAULTS"></a>**E-ANCHORS-INIT-DEFAULTS**: The skill suggests the target directory name as the default project name and an uppercase abbreviation as the default prefix (e.g., directory `auth-service` → name "auth-service", prefix "AUTH").
-  ← [P-ANCHORS-INIT-PREFIX](PRODUCT.md#P-ANCHORS-INIT-PREFIX)
+- <a id="E-ANCHORS-SETUP-DEFAULTS"></a>**E-ANCHORS-SETUP-DEFAULTS**: The skill suggests the target directory name as the default project name and an uppercase abbreviation as the default prefix (e.g., directory `auth-service` → name "auth-service", prefix "AUTH").
+  ← [P-ANCHORS-SETUP-PREFIX](PRODUCT.md#P-ANCHORS-SETUP-PREFIX)
 
-- <a id="E-ANCHORS-INIT-CLAUDE-MD-APPEND"></a>**E-ANCHORS-INIT-CLAUDE-MD-APPEND**: When no parent directory (up to repo root) contains `ANCHORS.md`, append a minimal ANCHORS section to the agent instructions file at the repo root. Resolution: check for `AGENTS.md` and `CLAUDE.md`; if one symlinks to the other, update the real file; if both exist as separate files, update both; if only one exists, update it; if neither exists, create `AGENTS.md`. The section instructs the agent to load the anchors skill — it does not duplicate the framework rules already in the skill. If an `ai-rules/` directory exists at the repo root, skip this step entirely — ai-rules manages those files via `ai-rules generate`.
-  ← [P-ANCHORS-INIT-CLAUDE-MD](PRODUCT.md#P-ANCHORS-INIT-CLAUDE-MD)
+- <a id="E-ANCHORS-SETUP-AGENT-INSTRUCTIONS"></a>**E-ANCHORS-SETUP-AGENT-INSTRUCTIONS**: When no parent directory (up to repo root) contains `ANCHORS.md`, append a minimal ANCHORS section to the agent instructions file at the repo root. Resolution: check for `AGENTS.md` and `CLAUDE.md`; if one symlinks to the other, update the real file; if both exist as separate files, update both; if only one exists, update it; if neither exists, create `AGENTS.md`. The section instructs the agent to load the anchors skill — it does not duplicate the framework rules already in the skill. If an `ai-rules/` directory exists at the repo root, skip this step entirely — ai-rules manages those files via `ai-rules generate`. This logic lives in the CLI (`anchors setup`) so it can be invoked both directly and by the skill.
+  ← [P-ANCHORS-SETUP-AGENT-INSTRUCTIONS](PRODUCT.md#P-ANCHORS-SETUP-AGENT-INSTRUCTIONS)
 
-- <a id="E-ANCHORS-INIT-PREFIX-UNIQUE"></a>**E-ANCHORS-INIT-PREFIX-UNIQUE**: After the user chooses a prefix, glob for all `**/ANCHORS.md` files in the repo (excluding `node_modules`, `vendor`, `.git`, build output), read their `prefix` fields, and reject duplicates.
-  ← [P-ANCHORS-INIT-UNIQUE-PREFIX](PRODUCT.md#P-ANCHORS-INIT-UNIQUE-PREFIX)
+- <a id="E-ANCHORS-SETUP-PREFIX-UNIQUE"></a>**E-ANCHORS-SETUP-PREFIX-UNIQUE**: After the user chooses a prefix, glob for all `**/ANCHORS.md` files in the repo (excluding `node_modules`, `vendor`, `.git`, build output), read their `prefix` fields, and reject duplicates. This check runs in the CLI.
+  ← [P-ANCHORS-SETUP-UNIQUE-PREFIX](PRODUCT.md#P-ANCHORS-SETUP-UNIQUE-PREFIX)
+
+- <a id="E-ANCHORS-CLI-INSTALL"></a>**E-ANCHORS-CLI-INSTALL**: `anchors install [--agent AGENT]` detects the agent (via `--agent` flag or by checking for `.claude/`, `.agents/`, `ai-rules/` directories) and copies the skill files to the agent-appropriate project-level location, then updates agent instructions. Subsequent runs detect the existing skill and skip. For ai-rules, it also creates the rule file and runs `ai-rules generate`.
+  ← [P-ANCHORS-INSTALL](PRODUCT.md#P-ANCHORS-INSTALL)
 
 ---
 
-## 5. Audit Algorithm
+## 5. Check Algorithm
 
-- <a id="E-ANCHORS-AUDIT-GLOB"></a>**E-ANCHORS-AUDIT-GLOB**: Module discovery globs for `**/ANCHORS.md` excluding `node_modules`, `vendor`, `.git`, and build output directories. Each file's YAML frontmatter is parsed for the `prefix` field.
-  ← [P-ANCHORS-AUDIT-DISCOVER](PRODUCT.md#P-ANCHORS-AUDIT-DISCOVER)
+- <a id="E-ANCHORS-CHECK-GLOB"></a>**E-ANCHORS-CHECK-GLOB**: Module discovery globs for `**/ANCHORS.md` excluding `node_modules`, `vendor`, `.git`, and build output directories. Each file's YAML frontmatter is parsed for the `prefix` field.
+  ← [P-ANCHORS-CHECK-DISCOVER](PRODUCT.md#P-ANCHORS-CHECK-DISCOVER)
 
-- <a id="E-ANCHORS-AUDIT-PREFIX-COLLISION"></a>**E-ANCHORS-AUDIT-PREFIX-COLLISION**: If two modules share the same prefix, the audit reports a prefix collision as an error.
-  ← [P-ANCHORS-AUDIT-DISCOVER](PRODUCT.md#P-ANCHORS-AUDIT-DISCOVER)
+- <a id="E-ANCHORS-CHECK-PREFIX-COLLISION"></a>**E-ANCHORS-CHECK-PREFIX-COLLISION**: If two modules share the same prefix, the check reports a prefix collision as an error.
+  ← [P-ANCHORS-CHECK-DISCOVER](PRODUCT.md#P-ANCHORS-CHECK-DISCOVER)
 
-- <a id="E-ANCHORS-AUDIT-DOC-PRESENCE"></a>**E-ANCHORS-AUDIT-DOC-PRESENCE**: For each module directory, check for the existence of `PRODUCT.md`, `ERD.md`, `TESTING.md`, and `DEPENDENCIES.md`. Report as `N/4 documents`.
-  ← [P-ANCHORS-AUDIT-DOCS](PRODUCT.md#P-ANCHORS-AUDIT-DOCS)
+- <a id="E-ANCHORS-CHECK-DOC-PRESENCE"></a>**E-ANCHORS-CHECK-DOC-PRESENCE**: For each module directory, check for the existence of `PRODUCT.md`, `ERD.md`, `TESTING.md`, and `DEPENDENCIES.md`. Report as `N/4 documents`.
+  ← [P-ANCHORS-CHECK-DOCS](PRODUCT.md#P-ANCHORS-CHECK-DOCS)
 
-- <a id="E-ANCHORS-AUDIT-ID-EXTRACT"></a>**E-ANCHORS-AUDIT-ID-EXTRACT**: Extract requirement IDs by scanning PRODUCT.md for `P-{PREFIX}-*` patterns, ERD.md for `E-{PREFIX}-*` patterns, and DEPENDENCIES.md for `D-DEP-*` patterns. Use the HTML anchor `<a id="...">` as the canonical source.
-  ← [P-ANCHORS-AUDIT-BACKLINKS](PRODUCT.md#P-ANCHORS-AUDIT-BACKLINKS)
+- <a id="E-ANCHORS-CHECK-ID-EXTRACT"></a>**E-ANCHORS-CHECK-ID-EXTRACT**: Extract requirement IDs by scanning PRODUCT.md for `P-{PREFIX}-*` patterns, ERD.md for `E-{PREFIX}-*` patterns, and DEPENDENCIES.md for `D-DEP-*` patterns. Use the HTML anchor `<a id="...">` as the canonical source.
+  ← [P-ANCHORS-CHECK-BACKLINKS](PRODUCT.md#P-ANCHORS-CHECK-BACKLINKS)
 
-- <a id="E-ANCHORS-AUDIT-BACKLINK-CHECK"></a>**E-ANCHORS-AUDIT-BACKLINK-CHECK**: For each `E-*` requirement, search for a `←` marker followed by a `[P-*]` link on the same or next line. Report any `E-*` without a backlink.
-  ← [P-ANCHORS-AUDIT-BACKLINKS](PRODUCT.md#P-ANCHORS-AUDIT-BACKLINKS)
+- <a id="E-ANCHORS-CHECK-BACKLINK-CHECK"></a>**E-ANCHORS-CHECK-BACKLINK-CHECK**: For each `E-*` requirement, search for a `←` marker followed by a `[P-*]` link on the same or next line. Report any `E-*` without a backlink.
+  ← [P-ANCHORS-CHECK-BACKLINKS](PRODUCT.md#P-ANCHORS-CHECK-BACKLINKS)
 
-- <a id="E-ANCHORS-AUDIT-PRD-COVERAGE"></a>**E-ANCHORS-AUDIT-PRD-COVERAGE**: Build a set of all `P-*` IDs from PRODUCT.md. For each, check if any `E-*` requirement's backlink references it. Report `P-*` IDs with zero `E-*` coverage.
-  ← [P-ANCHORS-AUDIT-COVERAGE](PRODUCT.md#P-ANCHORS-AUDIT-COVERAGE)
+- <a id="E-ANCHORS-CHECK-PRD-COVERAGE"></a>**E-ANCHORS-CHECK-PRD-COVERAGE**: Build a set of all `P-*` IDs from PRODUCT.md. For each, check if any `E-*` requirement's backlink references it. Report `P-*` IDs with zero `E-*` coverage.
+  ← [P-ANCHORS-CHECK-COVERAGE](PRODUCT.md#P-ANCHORS-CHECK-COVERAGE)
 
-- <a id="E-ANCHORS-AUDIT-CODE-SEARCH"></a>**E-ANCHORS-AUDIT-CODE-SEARCH**: Search all non-excluded source files for strings matching known `P-*`, `E-*`, and `D-DEP-*` IDs. Classify each file as implementation or test based on path conventions (e.g., `*_test.go`, `*.test.ts`, `test_*.py`, files under `__tests__/`).
-  ← [P-ANCHORS-AUDIT-CODE-TRACE](PRODUCT.md#P-ANCHORS-AUDIT-CODE-TRACE)
+- <a id="E-ANCHORS-CHECK-CODE-SEARCH"></a>**E-ANCHORS-CHECK-CODE-SEARCH**: Search all non-excluded source files for strings matching known `P-*`, `E-*`, and `D-DEP-*` IDs. Classify each file as implementation or test based on path conventions (e.g., `*_test.go`, `*.test.ts`, `test_*.py`, files under `__tests__/`).
+  ← [P-ANCHORS-CHECK-CODE-TRACE](PRODUCT.md#P-ANCHORS-CHECK-CODE-TRACE)
 
-- <a id="E-ANCHORS-AUDIT-STALE-REFS"></a>**E-ANCHORS-AUDIT-STALE-REFS**: Any requirement ID found in code that doesn't match an ID in any ANCHORS document is reported as a stale reference.
-  ← [P-ANCHORS-AUDIT-CODE-TRACE](PRODUCT.md#P-ANCHORS-AUDIT-CODE-TRACE)
+- <a id="E-ANCHORS-CHECK-STALE-REFS"></a>**E-ANCHORS-CHECK-STALE-REFS**: Any requirement ID found in code that doesn't match an ID in any ANCHORS document is reported as a stale reference.
+  ← [P-ANCHORS-CHECK-CODE-TRACE](PRODUCT.md#P-ANCHORS-CHECK-CODE-TRACE)
 
-- <a id="E-ANCHORS-AUDIT-TEST-GAP"></a>**E-ANCHORS-AUDIT-TEST-GAP**: Requirements that appear in implementation files but not in test files are reported as "in code but not in tests."
-  ← [P-ANCHORS-AUDIT-TEST-TRACE](PRODUCT.md#P-ANCHORS-AUDIT-TEST-TRACE)
+- <a id="E-ANCHORS-CHECK-TEST-GAP"></a>**E-ANCHORS-CHECK-TEST-GAP**: Requirements that appear in implementation files but not in test files are reported as "in code but not in tests."
+  ← [P-ANCHORS-CHECK-TEST-TRACE](PRODUCT.md#P-ANCHORS-CHECK-TEST-TRACE)
 
-- <a id="E-ANCHORS-AUDIT-CROSS-RESOLVE"></a>**E-ANCHORS-AUDIT-CROSS-RESOLVE**: For backlinks containing relative paths (e.g., `../checkout/PRODUCT.md#P-*`), resolve the path relative to the current module directory and verify the target file exists and contains the referenced anchor ID.
-  ← [P-ANCHORS-AUDIT-CROSS-MODULE](PRODUCT.md#P-ANCHORS-AUDIT-CROSS-MODULE)
+- <a id="E-ANCHORS-CHECK-CROSS-RESOLVE"></a>**E-ANCHORS-CHECK-CROSS-RESOLVE**: For backlinks containing relative paths (e.g., `../checkout/PRODUCT.md#P-*`), resolve the path relative to the current module directory and verify the target file exists and contains the referenced anchor ID.
+  ← [P-ANCHORS-CHECK-CROSS-MODULE](PRODUCT.md#P-ANCHORS-CHECK-CROSS-MODULE)
 
-- <a id="E-ANCHORS-AUDIT-OPEN-SCAN"></a>**E-ANCHORS-AUDIT-OPEN-SCAN**: Scan all ANCHORS documents for `OPEN-*` strings not preceded by `~~` (which indicates resolved). Report each with its source file.
-  ← [P-ANCHORS-AUDIT-OPEN](PRODUCT.md#P-ANCHORS-AUDIT-OPEN)
+- <a id="E-ANCHORS-CHECK-OPEN-SCAN"></a>**E-ANCHORS-CHECK-OPEN-SCAN**: Scan all ANCHORS documents for `OPEN-*` strings not preceded by `~~` (which indicates resolved). Report each with its source file.
+  ← [P-ANCHORS-CHECK-OPEN](PRODUCT.md#P-ANCHORS-CHECK-OPEN)
 
-- <a id="E-ANCHORS-AUDIT-REPORT-FORMAT"></a>**E-ANCHORS-AUDIT-REPORT-FORMAT**: The audit report is structured markdown with sections: Modules (list with prefix, doc count), Traceability (aggregate stats), and Gaps (categorized: missing backlinks, uncovered PRD, untraced requirements, missing test refs, stale refs, open questions, dependency boundary issues).
-  ← [P-ANCHORS-AUDIT-REPORT](PRODUCT.md#P-ANCHORS-AUDIT-REPORT)
+- <a id="E-ANCHORS-CHECK-REPORT-FORMAT"></a>**E-ANCHORS-CHECK-REPORT-FORMAT**: The check report is structured markdown with sections: Modules (list with prefix, doc count), Traceability (aggregate stats), and Gaps (categorized: missing backlinks, uncovered PRD, untraced requirements, missing test refs, stale refs, open questions, dependency boundary issues). The CLI produces the structural report; the skill adds semantic analysis on top.
+  ← [P-ANCHORS-CHECK-REPORT](PRODUCT.md#P-ANCHORS-CHECK-REPORT)
 
 ---
 
@@ -130,39 +133,48 @@ ANCHORS is implemented entirely as a Claude Code skill — a markdown instructio
 
 ## 7. Routing Logic
 
-- <a id="E-ANCHORS-ROUTE-PARSE"></a>**E-ANCHORS-ROUTE-PARSE**: Argument parsing: no args → interactive mode, `init` → init mode (CWD), `init <path>` → init mode (given path), `audit` → audit mode, `embed` → embed mode (CWD), `embed <path>` → embed mode (given path), anything else → print usage.
+- <a id="E-ANCHORS-ROUTE-PARSE"></a>**E-ANCHORS-ROUTE-PARSE**: Argument parsing: no args → interactive mode, `setup` → setup mode (CWD), `setup <path>` → setup mode (given path), `check` → check mode (determine module path), `embed` → embed mode (CWD), `embed <path>` → embed mode (given path), anything else → print usage.
   ← [P-ANCHORS-ROUTE-ARGS](PRODUCT.md#P-ANCHORS-ROUTE-ARGS)
 
-- <a id="E-ANCHORS-ROUTE-RECOMMEND"></a>**E-ANCHORS-ROUTE-RECOMMEND**: In interactive mode, if any `**/ANCHORS.md` exists in the repo, recommend Audit first. If none exist, recommend Init first. Show Embed as an option only if any module has `mode: detached`. Use `AskUserQuestion`.
+- <a id="E-ANCHORS-ROUTE-RECOMMEND"></a>**E-ANCHORS-ROUTE-RECOMMEND**: In interactive mode, if any `**/ANCHORS.md` exists in the repo, recommend Check first. If none exist, recommend Setup first. Show Embed as an option only if any module has `mode: detached`. Use `AskUserQuestion`.
   ← [P-ANCHORS-ROUTE-INTERACTIVE](PRODUCT.md#P-ANCHORS-ROUTE-INTERACTIVE)
 
 ---
 
-## 8. Installer
+## 8. CLI
 
-- <a id="E-ANCHORS-INSTALL-AGENT-MENU"></a>**E-ANCHORS-INSTALL-AGENT-MENU**: The installer presents a numbered menu of supported agents: (1) Claude Code, (2) Amp, (3) Codex, (4) ai-rules. Invalid selections exit with an error.
-  ← [P-ANCHORS-INSTALL-AGENTS](PRODUCT.md#P-ANCHORS-INSTALL-AGENTS)
+- <a id="E-ANCHORS-CLI-SUBCOMMANDS"></a>**E-ANCHORS-CLI-SUBCOMMANDS**: The `anchors` CLI is a bash script that dispatches to subcommands: `setup`, `check`, `upgrade`. Running with no arguments or an unknown subcommand prints usage. The CLI bundles the skill files and templates alongside itself.
+  ← [P-ANCHORS-CLI](PRODUCT.md#P-ANCHORS-CLI)
 
-- <a id="E-ANCHORS-INSTALL-SCOPE-MENU"></a>**E-ANCHORS-INSTALL-SCOPE-MENU**: For Claude Code, Amp, and Codex, the installer prompts for scope: (1) User-level, (2) Project-level. The ai-rules path skips this prompt (always project-level).
-  ← [P-ANCHORS-INSTALL-SCOPE](PRODUCT.md#P-ANCHORS-INSTALL-SCOPE)
+- <a id="E-ANCHORS-CLI-SETUP-FLOW"></a>**E-ANCHORS-CLI-SETUP-FLOW**: `anchors setup [--prefix PREFIX] [--mode MODE] [path]` scaffolds a document skeleton in the target directory. It checks prefix uniqueness, creates the target directory, and writes skeleton files (ANCHORS.md with frontmatter, plus empty PRODUCT.md, ERD.md, TESTING.md, DEPENDENCIES.md). Does not install the skill — that is `anchors install`.
+  ← [P-ANCHORS-CLI-SETUP](PRODUCT.md#P-ANCHORS-CLI-SETUP)
 
-- <a id="E-ANCHORS-INSTALL-TARGET-DIRS"></a>**E-ANCHORS-INSTALL-TARGET-DIRS**: Target directory resolution maps agent and scope to a path: Claude Code user → `~/.claude/skills/anchors/`, Claude Code project → `.claude/skills/anchors/`, Amp user → `~/.config/agents/skills/anchors/`, Amp project → `.agents/skills/anchors/`, Codex user → `~/.codex/skills/anchors/`, Codex project → `.agents/skills/anchors/`.
-  ← [P-ANCHORS-INSTALL-COPY](PRODUCT.md#P-ANCHORS-INSTALL-COPY)
+- <a id="E-ANCHORS-CLI-AGENT-DETECT"></a>**E-ANCHORS-CLI-AGENT-DETECT**: Agent detection order: (1) `--agent` flag if provided, (2) check for `.claude/` directory → Claude Code, (3) check for `.agents/` directory → Amp/Codex, (4) check for `ai-rules/` directory → ai-rules. If no agent can be detected, prompt the user.
+  ← [P-ANCHORS-CLI-AGENTS](PRODUCT.md#P-ANCHORS-CLI-AGENTS)
 
-- <a id="E-ANCHORS-INSTALL-REPLACE"></a>**E-ANCHORS-INSTALL-REPLACE**: Before copying, the installer removes any existing file, symlink, or directory at the target path. It creates parent directories as needed and copies the entire `skill/` directory.
-  ← [P-ANCHORS-INSTALL-COPY](PRODUCT.md#P-ANCHORS-INSTALL-COPY)
+- <a id="E-ANCHORS-CLI-SKILL-TARGET-DIRS"></a>**E-ANCHORS-CLI-SKILL-TARGET-DIRS**: Skill installation target maps agent to project-level path: Claude Code → `.claude/skills/anchors/`, Amp → `.agents/skills/anchors/`, Codex → `.agents/skills/anchors/`, ai-rules → `ai-rules/skills/anchors/`. All installs are project-level only.
+  ← [P-ANCHORS-CLI-AGENTS](PRODUCT.md#P-ANCHORS-CLI-AGENTS)
 
-- <a id="E-ANCHORS-INSTALL-AIRULES-PATH"></a>**E-ANCHORS-INSTALL-AIRULES-PATH**: For ai-rules, the target directory is `ai-rules/skills/anchors/`. After copying the skill, the installer runs `ai-rules generate` to regenerate all agent-specific output files from the ai-rules source tree.
-  ← [P-ANCHORS-INSTALL-AIRULES](PRODUCT.md#P-ANCHORS-INSTALL-AIRULES)
+- <a id="E-ANCHORS-CLI-SKILL-REPLACE"></a>**E-ANCHORS-CLI-SKILL-REPLACE**: Before copying skill files, the CLI removes any existing file, symlink, or directory at the target path. It creates parent directories as needed and copies the skill directory.
+  ← [P-ANCHORS-CLI-SETUP](PRODUCT.md#P-ANCHORS-CLI-SETUP)
 
-- <a id="E-ANCHORS-INSTALL-AIRULES-CHECKS"></a>**E-ANCHORS-INSTALL-AIRULES-CHECKS**: Before proceeding with ai-rules installation, the installer checks: (1) `ai-rules` command is available on PATH via `command -v`, (2) an `ai-rules/` directory exists in the current working directory. Each failed check exits with a descriptive error message and remediation instructions.
-  ← [P-ANCHORS-INSTALL-AIRULES-PREREQS](PRODUCT.md#P-ANCHORS-INSTALL-AIRULES-PREREQS)
+- <a id="E-ANCHORS-CLI-INSTRUCTIONS-DIRECT"></a>**E-ANCHORS-CLI-INSTRUCTIONS-DIRECT**: For Claude Code, Amp, or Codex, the CLI appends an ANCHORS section to the agent instructions file at the repo root. Uses resolution logic: check for `AGENTS.md` and `CLAUDE.md`; if one symlinks to the other, update the real file; if both exist as separate files, update both; if only one exists, update it; if neither exists, create `AGENTS.md`. Skips if the file already contains an ANCHORS section.
+  ← [P-ANCHORS-SETUP-AGENT-INSTRUCTIONS](PRODUCT.md#P-ANCHORS-SETUP-AGENT-INSTRUCTIONS)
 
-- <a id="E-ANCHORS-INSTALL-INSTRUCTIONS-DIRECT"></a>**E-ANCHORS-INSTALL-INSTRUCTIONS-DIRECT**: For project-level installs of Claude Code, Amp, or Codex, the installer appends an ANCHORS section to the agent instructions file at the repo root. Uses the same resolution logic as init step 6: check for `AGENTS.md` and `CLAUDE.md`; if one symlinks to the other, update the real file; if both exist as separate files, update both; if only one exists, update it; if neither exists, create `AGENTS.md`. Skips if the file already contains an ANCHORS section.
-  ← [P-ANCHORS-INSTALL-AGENT-INSTRUCTIONS](PRODUCT.md#P-ANCHORS-INSTALL-AGENT-INSTRUCTIONS)
+- <a id="E-ANCHORS-CLI-INSTRUCTIONS-AIRULES"></a>**E-ANCHORS-CLI-INSTRUCTIONS-AIRULES**: For ai-rules, the CLI creates `ai-rules/anchors.md` containing the ANCHORS instructions. Skips if the file already exists. Runs `ai-rules generate` after both the skill copy and rule file creation.
+  ← [P-ANCHORS-CLI-AIRULES](PRODUCT.md#P-ANCHORS-CLI-AIRULES)
 
-- <a id="E-ANCHORS-INSTALL-INSTRUCTIONS-AIRULES"></a>**E-ANCHORS-INSTALL-INSTRUCTIONS-AIRULES**: For ai-rules installs, the installer creates `ai-rules/anchors.md` containing the ANCHORS instructions (telling the agent to load the anchors skill before making changes). Skips if the file already exists. Runs `ai-rules generate` after both the skill copy and rule file creation.
-  ← [P-ANCHORS-INSTALL-AGENT-INSTRUCTIONS](PRODUCT.md#P-ANCHORS-INSTALL-AGENT-INSTRUCTIONS)
+- <a id="E-ANCHORS-CLI-AIRULES-CHECKS"></a>**E-ANCHORS-CLI-AIRULES-CHECKS**: Before proceeding with ai-rules setup, the CLI checks: (1) `ai-rules` command is available on PATH via `command -v`, (2) an `ai-rules/` directory exists in the current working directory. Each failed check exits with a descriptive error message and remediation instructions.
+  ← [P-ANCHORS-CLI-AIRULES](PRODUCT.md#P-ANCHORS-CLI-AIRULES)
+
+- <a id="E-ANCHORS-CLI-SCAFFOLD"></a>**E-ANCHORS-CLI-SCAFFOLD**: `anchors setup` creates the document skeleton: `ANCHORS.md` (with prefix and mode in frontmatter), `PRODUCT.md`, `ERD.md`, `TESTING.md`, and `DEPENDENCIES.md` (with structure from templates but no populated content). The `--prefix` flag is required; `--mode` defaults to embedded.
+  ← [P-ANCHORS-CLI-SETUP](PRODUCT.md#P-ANCHORS-CLI-SETUP)
+
+- <a id="E-ANCHORS-CLI-CHECK-STRUCTURAL"></a>**E-ANCHORS-CLI-CHECK-STRUCTURAL**: `anchors check <path>` requires a path to a directory containing `ANCHORS.md`. It performs all structural validation on that single module without an LLM: document presence, frontmatter validation, backlink checking, PRD coverage, ID extraction, open question scanning, and forward reference validation for detached modules. Outputs a structured report and exits with non-zero status if errors are found.
+  ← [P-ANCHORS-CLI-CHECK](PRODUCT.md#P-ANCHORS-CLI-CHECK)
+
+- <a id="E-ANCHORS-CLI-UPGRADE"></a>**E-ANCHORS-CLI-UPGRADE**: `anchors upgrade` detects the installed skill location (same agent detection as setup), removes the existing skill directory, and copies the current version bundled with the CLI. Prints the previous and new version if version info is available.
+  ← [P-ANCHORS-CLI-UPGRADE](PRODUCT.md#P-ANCHORS-CLI-UPGRADE)
 
 ---
 
@@ -184,20 +196,20 @@ ANCHORS is implemented entirely as a Claude Code skill — a markdown instructio
   ← [P-ANCHORS-DETACHED-IN-REPO](PRODUCT.md#P-ANCHORS-DETACHED-IN-REPO)
   ← [P-ANCHORS-DETACHED-EXTERNAL](PRODUCT.md#P-ANCHORS-DETACHED-EXTERNAL)
 
-- <a id="E-ANCHORS-DETACHED-TARGET-ACCESS"></a>**E-ANCHORS-DETACHED-TARGET-ACCESS**: Init and audit resolve the target codebase. **In-repo**: resolve `path` relative to ANCHORS.md and use the local filesystem directly. **External**: access the codebase at `repo` and `ref`, then scope to `path` (relative to repo root; defaults to `/`). External targets should be cached for the session to avoid redundant fetches.
-  ← [P-ANCHORS-DETACHED-INIT](PRODUCT.md#P-ANCHORS-DETACHED-INIT)
-  ← [P-ANCHORS-DETACHED-AUDIT](PRODUCT.md#P-ANCHORS-DETACHED-AUDIT)
+- <a id="E-ANCHORS-DETACHED-TARGET-ACCESS"></a>**E-ANCHORS-DETACHED-TARGET-ACCESS**: Setup and check resolve the target codebase. **In-repo**: resolve `path` relative to ANCHORS.md and use the local filesystem directly. **External**: access the codebase at `repo` and `ref`, then scope to `path` (relative to repo root; defaults to `/`). External targets should be cached for the session to avoid redundant fetches.
+  ← [P-ANCHORS-DETACHED-SETUP](PRODUCT.md#P-ANCHORS-DETACHED-SETUP)
+  ← [P-ANCHORS-DETACHED-CHECK](PRODUCT.md#P-ANCHORS-DETACHED-CHECK)
 
 - <a id="E-ANCHORS-DETACHED-FORWARD-REF-FORMAT"></a>**E-ANCHORS-DETACHED-FORWARD-REF-FORMAT**: Forward references use `→` followed by backtick-wrapped `file:symbol` entries (e.g., `` → `src/auth/session.go:NewSession`, `src/auth/middleware.go:ValidateToken` ``). Multiple refs are comma-separated on one line. File paths are relative to the resolved target directory (the `path` directory, however it was resolved).
   ← [P-ANCHORS-DETACHED-FORWARD-REFS](PRODUCT.md#P-ANCHORS-DETACHED-FORWARD-REFS)
 
-- <a id="E-ANCHORS-DETACHED-FORWARD-REF-VALIDATION"></a>**E-ANCHORS-DETACHED-FORWARD-REF-VALIDATION**: Audit resolves each `→` reference against the target codebase: the file must exist within the resolved target directory, and the symbol should be findable via grep in that file. Broken refs (missing file or missing symbol) are reported in the audit gaps.
-  ← [P-ANCHORS-DETACHED-AUDIT](PRODUCT.md#P-ANCHORS-DETACHED-AUDIT)
+- <a id="E-ANCHORS-DETACHED-FORWARD-REF-VALIDATION"></a>**E-ANCHORS-DETACHED-FORWARD-REF-VALIDATION**: Check resolves each `→` reference against the target codebase: the file must exist within the resolved target directory, and the symbol should be findable via grep in that file. Broken refs (missing file or missing symbol) are reported in the check gaps.
+  ← [P-ANCHORS-DETACHED-CHECK](PRODUCT.md#P-ANCHORS-DETACHED-CHECK)
 
-- <a id="E-ANCHORS-DETACHED-INIT-RESEARCH"></a>**E-ANCHORS-DETACHED-INIT-RESEARCH**: Init resolves the target codebase and runs the same subagent research as embedded mode, scoped to the resolved target directory. Generated ERD.md includes `→` forward references to code locations discovered during research.
-  ← [P-ANCHORS-DETACHED-INIT](PRODUCT.md#P-ANCHORS-DETACHED-INIT)
+- <a id="E-ANCHORS-DETACHED-SETUP-RESEARCH"></a>**E-ANCHORS-DETACHED-SETUP-RESEARCH**: Setup resolves the target codebase and runs the same subagent research as embedded mode, scoped to the resolved target directory. Generated ERD.md includes `→` forward references to code locations discovered during research.
+  ← [P-ANCHORS-DETACHED-SETUP](PRODUCT.md#P-ANCHORS-DETACHED-SETUP)
 
-- <a id="E-ANCHORS-DETACHED-NO-INLINE-TAGS"></a>**E-ANCHORS-DETACHED-NO-INLINE-TAGS**: In detached mode, audit does not search the target codebase for inline requirement tags (`P-*`, `E-*` in code comments). Traceability is purely via `→` forward references in the docs. The target codebase is never modified.
+- <a id="E-ANCHORS-DETACHED-NO-INLINE-TAGS"></a>**E-ANCHORS-DETACHED-NO-INLINE-TAGS**: In detached mode, check does not search the target codebase for inline requirement tags (`P-*`, `E-*` in code comments). Traceability is purely via `→` forward references in the docs. The target codebase is never modified.
   ← [P-ANCHORS-DETACHED-NO-TOUCH](PRODUCT.md#P-ANCHORS-DETACHED-NO-TOUCH)
 
 - <a id="E-ANCHORS-EMBED-PREREQ"></a>**E-ANCHORS-EMBED-PREREQ**: The embed action is only available for detached modules (`mode: detached` in ANCHORS.md). If invoked on an embedded module, report an error. The target code must be locally accessible. **In-repo**: resolve `path` relative to ANCHORS.md — the code is already local. **External**: if `repo` is a local path, use it directly; if `repo` is a remote URL, prompt for the local path.

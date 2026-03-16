@@ -4,7 +4,6 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
-TEMPLATES_DIR="$REPO_ROOT/skill/templates"
 SKILL_FILE="$REPO_ROOT/skill/SKILL.md"
 FIXTURES_DIR="$REPO_ROOT/testdata/fixtures"
 
