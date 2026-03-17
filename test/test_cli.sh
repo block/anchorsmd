@@ -24,12 +24,14 @@ assert_grep "Has usage function" 'usage()' "$CLI"
 
 echo "  [3] E-ANCHORS-CLI-AGENT-DETECT: Agent detection"
 assert_grep "Detects .claude/ directory" '\.claude/' "$CLI"
+assert_grep "Detects .goose/ directory" '\.goose/' "$CLI"
 assert_grep "Detects .agents/ directory" '\.agents/' "$CLI"
 assert_grep "Detects ai-rules/ directory" 'ai-rules/' "$CLI"
 assert_grep "Accepts --agent flag" '\-\-agent' "$CLI"
 
 echo "  [4] E-ANCHORS-CLI-SKILL-TARGET-DIRS: Project-level skill paths"
 assert_grep "Claude Code project path" '\.claude/skills/' "$CLI"
+assert_grep "Goose project path" '\.goose/skills/' "$CLI"
 assert_grep "Amp project path" '\.agents/skills/' "$CLI"
 assert_grep "ai-rules project path" 'ai-rules/skills/' "$CLI"
 
@@ -114,7 +116,14 @@ else
   inc_test
 fi
 
-echo "  [16] Functional: install is idempotent"
+echo "  [16] Functional: install with --agent goose"
+goose_tmpdir=$(mktemp -d)
+trap "rm -rf '${tmpdir}' '${goose_tmpdir}'" EXIT
+mkdir -p "${goose_tmpdir}/.goose"
+(cd "${goose_tmpdir}" && "$CLI" install --agent goose) >/dev/null 2>&1
+assert_file_exists "Goose skill installed" "${goose_tmpdir}/.goose/skills/anchors/SKILL.md"
+
+echo "  [17] Functional: install is idempotent"
 install_output=$( (cd "${tmpdir}" && "$CLI" install --agent claude) 2>&1 )
 inc_test
 if echo "$install_output" | grep -q 'already installed'; then
@@ -124,7 +133,7 @@ else
   inc_fail
 fi
 
-echo "  [17] Functional: check requires path"
+echo "  [18] Functional: check requires path"
 if ("$CLI" check) 2>/dev/null; then
   echo "    ✗ Check without path should have failed"
   inc_test; inc_fail
@@ -133,7 +142,7 @@ else
   inc_test
 fi
 
-echo "  [18] Functional: check subcommand runs"
+echo "  [19] Functional: check subcommand runs"
 check_output=$("$CLI" check "$REPO_ROOT" 2>&1 || true)
 inc_test
 if echo "$check_output" | grep -q '## ANCHORS Check Report'; then

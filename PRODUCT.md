@@ -111,7 +111,7 @@ ANCHORS is a requirements-driven development framework consisting of a CLI tool 
 
 - <a id="P-ANCHORS-CLI-UPGRADE"></a>**P-ANCHORS-CLI-UPGRADE**: `anchors upgrade` updates the skill files in the repo to the latest version bundled with the CLI.
 
-- <a id="P-ANCHORS-CLI-AGENTS"></a>**P-ANCHORS-CLI-AGENTS**: The CLI supports multiple AI coding agents: Claude Code, Amp, Codex, and ai-rules. The agent is specified via `--agent` flag or auto-detected from the repo. Skill files are copied to the agent-appropriate project-level location.
+- <a id="P-ANCHORS-CLI-AGENTS"></a>**P-ANCHORS-CLI-AGENTS**: The CLI supports multiple AI coding agents: Claude Code, Amp, Codex, Goose, and ai-rules. The agent is specified via `--agent` flag or auto-detected from the repo. Skill files are copied to the agent-appropriate project-level location.
 
 - <a id="P-ANCHORS-CLI-AIRULES"></a>**P-ANCHORS-CLI-AIRULES**: When the agent is ai-rules, the CLI copies the skill into the project's `ai-rules/skills/` directory and runs `ai-rules generate`. This requires the `ai-rules` CLI to be installed and an `ai-rules/` directory to exist in the project.
 

@@ -149,10 +149,10 @@ ANCHORS consists of two components: an `anchors` CLI (bash script with subcomman
 - <a id="E-ANCHORS-CLI-SETUP-FLOW"></a>**E-ANCHORS-CLI-SETUP-FLOW**: `anchors setup [--prefix PREFIX] [--mode MODE] [path]` scaffolds a document skeleton in the target directory. It checks prefix uniqueness, creates the target directory, and writes skeleton files (ANCHORS.md with frontmatter, plus empty PRODUCT.md, ERD.md, TESTING.md, DEPENDENCIES.md). Does not install the skill — that is `anchors install`.
   ← [P-ANCHORS-CLI-SETUP](PRODUCT.md#P-ANCHORS-CLI-SETUP)
 
-- <a id="E-ANCHORS-CLI-AGENT-DETECT"></a>**E-ANCHORS-CLI-AGENT-DETECT**: Agent detection order: (1) `--agent` flag if provided, (2) check for `.claude/` directory → Claude Code, (3) check for `.agents/` directory → Amp/Codex, (4) check for `ai-rules/` directory → ai-rules. If no agent can be detected, prompt the user.
+- <a id="E-ANCHORS-CLI-AGENT-DETECT"></a>**E-ANCHORS-CLI-AGENT-DETECT**: Agent detection order: (1) `--agent` flag if provided, (2) check for `.claude/` directory → Claude Code, (3) check for `.goose/` directory → Goose, (4) check for `.agents/` directory → Amp/Codex, (5) check for `ai-rules/` directory → ai-rules. If no agent can be detected, prompt the user.
   ← [P-ANCHORS-CLI-AGENTS](PRODUCT.md#P-ANCHORS-CLI-AGENTS)
 
-- <a id="E-ANCHORS-CLI-SKILL-TARGET-DIRS"></a>**E-ANCHORS-CLI-SKILL-TARGET-DIRS**: Skill installation target maps agent to project-level path: Claude Code → `.claude/skills/anchors/`, Amp → `.agents/skills/anchors/`, Codex → `.agents/skills/anchors/`, ai-rules → `ai-rules/skills/anchors/`. All installs are project-level only.
+- <a id="E-ANCHORS-CLI-SKILL-TARGET-DIRS"></a>**E-ANCHORS-CLI-SKILL-TARGET-DIRS**: Skill installation target maps agent to project-level path: Claude Code → `.claude/skills/anchors/`, Goose → `.goose/skills/anchors/`, Amp → `.agents/skills/anchors/`, Codex → `.agents/skills/anchors/`, ai-rules → `ai-rules/skills/anchors/`. All installs are project-level only.
   ← [P-ANCHORS-CLI-AGENTS](PRODUCT.md#P-ANCHORS-CLI-AGENTS)
 
 - <a id="E-ANCHORS-CLI-SKILL-REPLACE"></a>**E-ANCHORS-CLI-SKILL-REPLACE**: Before copying skill files, the CLI removes any existing file, symlink, or directory at the target path. It creates parent directories as needed and copies the skill directory.

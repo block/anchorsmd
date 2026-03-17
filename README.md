@@ -167,6 +167,7 @@ The CLI installs the skill to the appropriate project-level location:
 | Agent | Skill location |
 |-------|---------------|
 | Claude Code | `.claude/skills/anchors/` |
+| [Goose](https://github.com/block/goose) | `.goose/skills/anchors/` |
 | Amp | `.agents/skills/anchors/` |
 | Codex | `.agents/skills/anchors/` |
 | [ai-rules](https://github.com/block/ai-rules) | `ai-rules/skills/anchors/` |

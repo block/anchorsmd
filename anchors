@@ -70,6 +70,8 @@ detect_agent() {
   fi
   if [ -d ".claude" ]; then
     echo "claude"
+  elif [ -d ".goose" ]; then
+    echo "goose"
   elif [ -d ".agents" ]; then
     echo "amp"
   elif [ -d "ai-rules" ]; then
@@ -84,6 +86,7 @@ skill_target_dir() {
   local agent="$1"
   case "${agent}" in
     claude)  echo ".claude/skills/${SKILL_NAME}" ;;
+    goose)   echo ".goose/skills/${SKILL_NAME}" ;;
     amp)     echo ".agents/skills/${SKILL_NAME}" ;;
     codex)   echo ".agents/skills/${SKILL_NAME}" ;;
     airules) echo "ai-rules/skills/${SKILL_NAME}" ;;
@@ -182,7 +185,7 @@ cmd_install() {
   local agent
   agent="$(detect_agent "${agent_flag}")"
   if [ -z "${agent}" ]; then
-    echo "Error: Could not detect agent. Use --agent to specify (claude, amp, codex, airules)." >&2
+    echo "Error: Could not detect agent. Use --agent to specify (claude, goose, amp, codex, airules)." >&2
     return 1
   fi
   install_skill "${agent}"
@@ -596,7 +599,7 @@ cmd_upgrade() {
   local agent
   agent="$(detect_agent "${agent_flag}")"
   if [ -z "${agent}" ]; then
-    echo "Error: Could not detect agent. Use --agent to specify (claude, amp, codex, airules)." >&2
+    echo "Error: Could not detect agent. Use --agent to specify (claude, goose, amp, codex, airules)." >&2
     return 1
   fi
 
@@ -631,7 +634,7 @@ usage() {
   echo "  upgrade           Update the skill files to the latest version"
   echo ""
   echo "Install options:"
-  echo "  --agent AGENT      claude, amp, codex, or airules (auto-detected if omitted)"
+  echo "  --agent AGENT      claude, goose, amp, codex, or airules (auto-detected if omitted)"
   echo ""
   echo "Setup options:"
   echo "  --prefix PREFIX    Requirement ID prefix (required)"
