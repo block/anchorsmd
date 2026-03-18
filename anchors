@@ -3,7 +3,13 @@
 # E-ANCHORS-CLI-SUBCOMMANDS: dispatches to install, setup, check, upgrade subcommands
 set -eo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_SOURCE="$0"
+while [ -L "${SCRIPT_SOURCE}" ]; do
+  SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_SOURCE}")" && pwd)"
+  SCRIPT_SOURCE="$(readlink "${SCRIPT_SOURCE}")"
+  [[ "${SCRIPT_SOURCE}" != /* ]] && SCRIPT_SOURCE="${SCRIPT_DIR}/${SCRIPT_SOURCE}"
+done
+SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_SOURCE}")" && pwd)"
 SKILL_SOURCE="${SCRIPT_DIR}/skill"
 SKILL_NAME="anchors"
 
