@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create release tarball
+        run: |
+          tar -czf anchors-release.tar.gz anchors skill/
+
+      - name: Generate sha256 for tarball
+        id: generate_hash
+        run: |
+          echo "file_hash=$(shasum -a 256 anchors-release.tar.gz | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        run: |
+          gh release create "$TAG" \
+            ./anchors-release.tar.gz \
+            --title "Release $TAG" \
+            --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+
+      - name: Generate token for tap release
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BLOCK_HOMEBREW_TAP_APP_ID }}
+          private-key: ${{ secrets.BLOCK_HOMEBREW_TAP_PRIVATE_KEY }}
+          owner: block
+          repositories: homebrew-tap
+
+      - name: Trigger Formula Bump
+        run: |
+          gh workflow run bump-formula.yaml \
+            --repo block/homebrew-tap \
+            -f repo=block/anchorsmd \
+            -f formula=anchors \
+            -f "tag=$TAG" \
+            -f "artifact_url=https://github.com/block/anchorsmd/releases/download/$TAG/anchors-release.tar.gz" \
+            -f "sha256=$FILE_HASH"
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          TAG: ${{ github.ref_name }}
+          FILE_HASH: ${{ steps.generate_hash.outputs.file_hash }}
