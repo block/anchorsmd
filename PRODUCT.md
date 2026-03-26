@@ -55,7 +55,7 @@ ANCHORS is a requirements-driven development framework consisting of a CLI tool 
 
 - <a id="P-ANCHORS-SETUP-EXISTING"></a>**P-ANCHORS-SETUP-EXISTING**: If ANCHORS documents already exist in the target directory, the skill asks the user whether to skip existing files or overwrite all.
 
-- <a id="P-ANCHORS-SETUP-AGENT-INSTRUCTIONS"></a>**P-ANCHORS-SETUP-AGENT-INSTRUCTIONS**: When setting up the first module in a repo (no parent `ANCHORS.md`), the CLI appends a short ANCHORS section to the repo's agent instructions file (`AGENTS.md` and/or `CLAUDE.md`). If both exist and are separate files, both are updated. If one is a symlink to the other, only the real file is updated. If neither exists, `AGENTS.md` is created. The section instructs the agent to load the anchors skill — it should not duplicate the framework rules already in the skill. If the project uses ai-rules (has an `ai-rules/` directory), the CLI skips this step since ai-rules manages agent instruction files.
+- <a id="P-ANCHORS-SETUP-AGENT-INSTRUCTIONS"></a>**P-ANCHORS-SETUP-AGENT-INSTRUCTIONS**: When setting up the first module in a repo (no parent `ANCHORS.md`), the CLI ensures the repo's agent instructions file contains a section that tells the agent to load the anchors skill. The section should not duplicate the framework rules already in the skill. If the project uses ai-rules (has an `ai-rules/` directory), the CLI skips this step since ai-rules manages agent instruction files.
 
 - <a id="P-ANCHORS-SETUP-UNIQUE-PREFIX"></a>**P-ANCHORS-SETUP-UNIQUE-PREFIX**: The CLI verifies that the chosen prefix is unique across all `ANCHORS.md` files in the repo.
 
@@ -79,7 +79,7 @@ ANCHORS is a requirements-driven development framework consisting of a CLI tool 
 
 - <a id="P-ANCHORS-CHECK-OPEN"></a>**P-ANCHORS-CHECK-OPEN**: The check scans all documents for unresolved `OPEN-*` items and includes them in the report.
 
-- <a id="P-ANCHORS-CHECK-REPORT"></a>**P-ANCHORS-CHECK-REPORT**: The check produces a structured summary report showing module status, traceability statistics, and categorized gaps. The CLI performs structural checks (deterministic, no LLM needed). The skill invokes the CLI first, then adds semantic analysis (requirement accuracy, staleness, drift).
+- <a id="P-ANCHORS-CHECK-REPORT"></a>**P-ANCHORS-CHECK-REPORT**: The check produces a structured summary report showing module status, traceability statistics, and categorized gaps. The report includes both structural validation and semantic analysis (requirement accuracy, staleness, drift).
 
 ---
 
