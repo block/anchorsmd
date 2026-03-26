@@ -25,8 +25,8 @@ A module's ANCHORS document set consists of up to four documents plus a marker f
 | Document | Purpose | Requirement IDs |
 |----------|---------|-----------------|
 | **ANCHORS.md** | Module marker. YAML frontmatter with `prefix` field. | — |
-| **PRODUCT.md** | Product requirements — user-facing behavior, workflows, experience. Source of truth. | `P-*` |
-| **ERD.md** | Engineering requirements — technical design, interfaces, constraints. Derived from PRODUCT.md. | `E-*` |
+| **PRODUCT.md** | Product requirements — observable behavior, outcomes, and qualities. No implementation approach. Litmus test: could you verify this requirement without reading source code? Source of truth. | `P-*` |
+| **ERD.md** | Engineering requirements — how the system achieves the product requirements. Technical decisions, mechanisms, interfaces. Derived from PRODUCT.md. | `E-*` |
 | **TESTING.md** | Testing strategy — pyramid, coverage invariants, requirement-to-test-layer mapping. Defines how requirements are verified. | — |
 | **DEPENDENCIES.md** | External dependencies — what the environment must provide because the system cannot supply it. | `D-DEP-*` |
 

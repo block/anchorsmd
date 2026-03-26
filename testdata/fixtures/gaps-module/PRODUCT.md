@@ -1,5 +1,5 @@
 ---
-scope: Product requirements — user-facing behavior, workflows, and experience.
+scope: Product requirements — observable behavior, outcomes, and qualities. No implementation approach.
 see-also:
   - ERD.md — technical requirements derived from this document.
   - TESTING.md — testing strategy covering these requirements.
