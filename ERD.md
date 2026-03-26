@@ -1,5 +1,5 @@
 ---
-scope: Engineering requirements — technical design, interfaces, and implementation constraints. Derived from product requirements.
+scope: Engineering requirements — how the system achieves the product requirements. Technical decisions, mechanisms, and interfaces. Derived from product requirements.
 see-also:
   - PRODUCT.md — product requirements that drive the technical decisions in this document.
   - TESTING.md — testing strategy covering these requirements.

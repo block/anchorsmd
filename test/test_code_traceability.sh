@@ -1,7 +1,7 @@
 #!/bin/bash
 # Layer 2: Integration — Code and test traceability
-# Tests: E-ANCHORS-AUDIT-CODE-SEARCH, E-ANCHORS-AUDIT-STALE-REFS,
-#        E-ANCHORS-AUDIT-TEST-GAP
+# Tests: E-ANCHORS-CHECK-CODE-SEARCH, E-ANCHORS-CHECK-STALE-REFS,
+#        E-ANCHORS-CHECK-TEST-GAP
 # Validates TESTING.md §2.3: code traceability in well-formed repo
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"
@@ -13,7 +13,7 @@ p_ids=$(grep -oE 'P-AUTH-[A-Z0-9-]+' "$FIXTURE/PRODUCT.md" | sort -u)
 e_ids=$(grep -oE 'E-AUTH-[A-Z0-9-]+' "$FIXTURE/ERD.md" | sort -u)
 all_ids=$(printf '%s\n%s\n' "$p_ids" "$e_ids" | sort -u)
 
-echo "  [1] E-ANCHORS-AUDIT-CODE-SEARCH: Find requirement IDs in source files"
+echo "  [1] E-ANCHORS-CHECK-CODE-SEARCH: Find requirement IDs in source files"
 
 # Search source files (non-test) for requirement references
 src_refs=$(grep -rhoE '[EP]-AUTH-[A-Z0-9-]+' "$FIXTURE/src/" 2>/dev/null | sort -u || true)
@@ -25,7 +25,7 @@ assert_grep "E-AUTH-HASH referenced in source" 'E-AUTH-HASH' "$FIXTURE/src/auth.
 assert_grep "E-AUTH-INVALIDATE referenced in source" 'E-AUTH-INVALIDATE' "$FIXTURE/src/auth.go"
 assert_grep "E-AUTH-JWT referenced in source" 'E-AUTH-JWT' "$FIXTURE/src/auth.go"
 
-echo "  [2] E-ANCHORS-AUDIT-CODE-SEARCH: Classify files as impl vs test"
+echo "  [2] E-ANCHORS-CHECK-CODE-SEARCH: Classify files as impl vs test"
 
 # Source files should be classified as implementation
 inc_test
@@ -45,7 +45,7 @@ else
   inc_fail
 fi
 
-echo "  [3] E-ANCHORS-AUDIT-STALE-REFS: Detect references to nonexistent IDs"
+echo "  [3] E-ANCHORS-CHECK-STALE-REFS: Detect references to nonexistent IDs"
 
 # Find all requirement-like IDs in code
 code_refs=$(grep -rhoE '[EP]-AUTH-[A-Z0-9-]+' "$FIXTURE/src/" "$FIXTURE/test/" 2>/dev/null | sort -u || true)
@@ -78,7 +78,7 @@ else
   inc_fail
 fi
 
-echo "  [4] E-ANCHORS-AUDIT-TEST-GAP: Requirements in code but not in tests"
+echo "  [4] E-ANCHORS-CHECK-TEST-GAP: Requirements in code but not in tests"
 
 # Find refs in impl files only
 impl_refs=$(grep -rhoE '[EP]-AUTH-[A-Z0-9-]+' "$FIXTURE/src/" 2>/dev/null | sort -u || true)

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Layer 2: Integration — Prefix collision detection
-# Tests: E-ANCHORS-AUDIT-PREFIX-COLLISION, E-ANCHORS-INIT-PREFIX-UNIQUE
+# Tests: E-ANCHORS-CHECK-PREFIX-COLLISION, E-ANCHORS-SETUP-PREFIX-UNIQUE
 # Validates TESTING.md §2.4: duplicate prefix across modules is rejected
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"

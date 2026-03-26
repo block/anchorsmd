@@ -1,7 +1,7 @@
 #!/bin/bash
 # Layer 2/3: Self-audit — Validate the ANCHORS repo's own documents
-# Tests: E-ANCHORS-AUDIT-BACKLINK-CHECK, E-ANCHORS-AUDIT-PRD-COVERAGE,
-#        E-ANCHORS-AUDIT-ID-EXTRACT, E-ANCHORS-MARKER-FORMAT
+# Tests: E-ANCHORS-CHECK-BACKLINK-CHECK, E-ANCHORS-CHECK-PRD-COVERAGE,
+#        E-ANCHORS-CHECK-ID-EXTRACT, E-ANCHORS-MARKER-FORMAT
 # TESTING.md: "running /anchors audit on the ANCHORS repo itself is a form of integration test"
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"

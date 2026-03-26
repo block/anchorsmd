@@ -1,7 +1,7 @@
 #!/bin/bash
 # Layer 2: Integration — Gaps module fixture
-# Tests: E-ANCHORS-AUDIT-BACKLINK-CHECK, E-ANCHORS-AUDIT-PRD-COVERAGE,
-#        E-ANCHORS-AUDIT-OPEN-SCAN
+# Tests: E-ANCHORS-CHECK-BACKLINK-CHECK, E-ANCHORS-CHECK-PRD-COVERAGE,
+#        E-ANCHORS-CHECK-OPEN-SCAN
 # Validates TESTING.md §2.4: audit on repo with gaps
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"

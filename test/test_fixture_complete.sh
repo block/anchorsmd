@@ -1,7 +1,7 @@
 #!/bin/bash
 # Layer 2: Integration — Complete module fixture
-# Tests: E-ANCHORS-AUDIT-DOC-PRESENCE, E-ANCHORS-AUDIT-BACKLINK-CHECK,
-#        E-ANCHORS-AUDIT-PRD-COVERAGE, E-ANCHORS-AUDIT-ID-EXTRACT
+# Tests: E-ANCHORS-CHECK-DOC-PRESENCE, E-ANCHORS-CHECK-BACKLINK-CHECK,
+#        E-ANCHORS-CHECK-PRD-COVERAGE, E-ANCHORS-CHECK-ID-EXTRACT
 # Validates TESTING.md §2.3: audit on well-formed repo
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"
