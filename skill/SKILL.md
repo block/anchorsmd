@@ -107,6 +107,22 @@ Implementation (must satisfy all of the above)
 6. **Tests are truthier than implementation, but documents are truthier than tests.** If the implementation diverges from the tests, the implementation is assumed buggy. If the tests diverge from the PRD or ERD, the tests are wrong. Fix the code to match the tests; fix the tests to match the documents; update the documents first if the requirement has genuinely changed.
 7. **Every P-\* and E-\* requirement must have test coverage.** See TESTING.md for coverage invariants and the requirement-to-test-layer mapping. A requirement without a corresponding test is a coverage gap that must be addressed.
 
+### Content Guidelines
+
+The litmus test: a product manager should read PRODUCT.md without needing to Google anything, and a staff engineer should read ERD.md and find real technical detail — not just a rephrasing of the product requirements.
+
+**PRODUCT.md — describe what users see and do:**
+
+- Name the experience, not the mechanism. "Updates in real-time" not "updates via SSE." "Interactive diagrams" not "interactive SVGs."
+- Every requirement needs a visible verb — what a human sees or does. "The UI shows X", "Users can Y", "A modal appears with Z." If you can't describe an observable behavior, it belongs in ERD or is underspecified.
+- Specify concrete details when they ARE the product requirement. "Cmd+T opens a new tab, Cmd+W closes the current tab" — not "keyboard shortcuts for tab management."
+- Don't reference undefined terms. If a concept isn't self-evident from the user's perspective, define it or point to where it's defined.
+
+**ERD.md — describe how the system achieves product requirements:**
+
+- Protocol names, file formats, data structures, algorithms, and implementation mechanisms all belong here. This is where technical specificity lives.
+- Add HOW, don't restate WHAT. If an ERD entry reads like a rephrasing of the P-* it links to, it's not adding value.
+
 ### Requirement ID Conventions
 
 **PRODUCT.md** — `P-` prefix with section-scoped slugs:
@@ -315,7 +331,7 @@ Setup uses the `anchors` CLI for deterministic steps (skill installation, scaffo
 
    The user's description of the project (from the conversation context, or a README, design doc, or similar artifact in the repo) is the source material. If the conversation doesn't contain enough context, use `AskUserQuestion` to ask the user to describe the project — what it does, who it's for, and how it works. This is a single open-ended question, not a multi-step interview.
 
-6. **Populate the documents.** Using the research findings (or user description) and the document format conventions described in the ANCHORS Framework section above, populate the skeleton files created by the CLI with real content:
+6. **Populate the documents.** Using the research findings (or user description), the Content Guidelines, and the document format conventions described in the ANCHORS Framework section above, populate the skeleton files created by the CLI with real content:
 
    - **ANCHORS.md**: Already created by CLI with correct frontmatter. No changes needed.
    - **PRODUCT.md**: Real P-* requirements organized by functional area. Every requirement should describe user-facing behavior, not implementation details. Use the prefix from ANCHORS.md to scope IDs (e.g., prefix `AUTH` → `P-AUTH-LOGIN`).
