@@ -102,10 +102,26 @@ Implementation (must satisfy all of the above)
 1. **PRODUCT.md is authoritative.** If there is a conflict between documents, PRODUCT.md wins.
 2. **ERD.md must fully satisfy PRODUCT.md.** Every product requirement should have corresponding engineering requirements that cover it.
 3. **All implementation must meet both PRD and ERD requirements.** Do not implement against only one document.
-4. **Keep documents consistent.** When changing a requirement, update PRODUCT.md first, then ERD.md to reflect it (and link back).
+4. **Keep documents consistent.** When changing a requirement or adding a new feature, update PRODUCT.md first, then ERD.md to reflect it (and link back), then update TESTING.md's coverage mapping table so every new or changed requirement has a test-layer assignment. Always verify the TESTING.md table reflects the current scope — even when a row already exists for the feature area, it may need updating to cover new requirements.
 5. **Do not add requirements to ERD.md that contradict or extend PRODUCT.md without updating PRODUCT.md first.** The PRD drives the ERD, not the other way around.
 6. **Tests are truthier than implementation, but documents are truthier than tests.** If the implementation diverges from the tests, the implementation is assumed buggy. If the tests diverge from the PRD or ERD, the tests are wrong. Fix the code to match the tests; fix the tests to match the documents; update the documents first if the requirement has genuinely changed.
 7. **Every P-\* and E-\* requirement must have test coverage.** See TESTING.md for coverage invariants and the requirement-to-test-layer mapping. A requirement without a corresponding test is a coverage gap that must be addressed.
+
+### Content Guidelines
+
+The litmus test: a product manager should read PRODUCT.md without needing to Google anything, and a staff engineer should read ERD.md and find real technical detail — not just a rephrasing of the product requirements.
+
+**PRODUCT.md — describe what users see and do:**
+
+- Name the experience, not the mechanism. "Updates in real-time" not "updates via SSE." "Interactive diagrams" not "interactive SVGs."
+- Every requirement needs a visible verb — what a human sees or does. "The UI shows X", "Users can Y", "A modal appears with Z." If you can't describe an observable behavior, it belongs in ERD or is underspecified.
+- Specify concrete details when they ARE the product requirement. "Cmd+T opens a new tab, Cmd+W closes the current tab" — not "keyboard shortcuts for tab management."
+- Don't reference undefined terms. If a concept isn't self-evident from the user's perspective, define it or point to where it's defined.
+
+**ERD.md — describe how the system achieves product requirements:**
+
+- Protocol names, file formats, data structures, algorithms, and implementation mechanisms all belong here. This is where technical specificity lives.
+- Add HOW, don't restate WHAT. If an ERD entry reads like a rephrasing of the P-* it links to, it's not adding value.
 
 ### Requirement ID Conventions
 
@@ -171,6 +187,7 @@ Rules:
 - Keep existing descriptive comments — the tag is an addition
 - Natural prose is fine: `// Per E-AUTH-SESSION, tokens expire after 24 hours`
 - Skip self-explanatory code, boilerplate, and standard library calls
+- **Tag test functions too** — every test file that verifies a requirement must carry the relevant E-*/P-* ID
 
 ### Monorepo Support
 
@@ -315,7 +332,7 @@ Setup uses the `anchors` CLI for deterministic steps (skill installation, scaffo
 
    The user's description of the project (from the conversation context, or a README, design doc, or similar artifact in the repo) is the source material. If the conversation doesn't contain enough context, use `AskUserQuestion` to ask the user to describe the project — what it does, who it's for, and how it works. This is a single open-ended question, not a multi-step interview.
 
-6. **Populate the documents.** Using the research findings (or user description) and the document format conventions described in the ANCHORS Framework section above, populate the skeleton files created by the CLI with real content:
+6. **Populate the documents.** Using the research findings (or user description), the Content Guidelines, and the document format conventions described in the ANCHORS Framework section above, populate the skeleton files created by the CLI with real content:
 
    - **ANCHORS.md**: Already created by CLI with correct frontmatter. No changes needed.
    - **PRODUCT.md**: Real P-* requirements organized by functional area. Every requirement should describe user-facing behavior, not implementation details. Use the prefix from ANCHORS.md to scope IDs (e.g., prefix `AUTH` → `P-AUTH-LOGIN`).
