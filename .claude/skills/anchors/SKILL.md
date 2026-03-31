@@ -27,7 +27,7 @@ A module's ANCHORS document set consists of up to four documents plus a marker f
 | **ANCHORS.md** | Module marker. YAML frontmatter with `prefix` field. | — |
 | **PRODUCT.md** | Product requirements — observable behavior, outcomes, and qualities. No implementation approach. Litmus test: could you verify this requirement without reading source code? Source of truth. | `P-*` |
 | **ERD.md** | Engineering requirements — how the system achieves the product requirements. Technical decisions, mechanisms, interfaces. Derived from PRODUCT.md. | `E-*` |
-| **TESTING.md** | Testing strategy — pyramid, coverage invariants, requirement-to-test-layer mapping. Defines how requirements are verified. | — |
+| **TESTING.md** | Testing strategy — pyramid, coverage invariants, tooling. Defines how requirements are verified. | — |
 | **DEPENDENCIES.md** | External dependencies — what the environment must provide because the system cannot supply it. | `D-DEP-*` |
 
 All four documents are part of the framework. TESTING.md and DEPENDENCIES.md participate in the truth hierarchy and have defined disagreement rules.
@@ -102,10 +102,10 @@ Implementation (must satisfy all of the above)
 1. **PRODUCT.md is authoritative.** If there is a conflict between documents, PRODUCT.md wins.
 2. **ERD.md must fully satisfy PRODUCT.md.** Every product requirement should have corresponding engineering requirements that cover it.
 3. **All implementation must meet both PRD and ERD requirements.** Do not implement against only one document.
-4. **Keep documents consistent.** When changing a requirement or adding a new feature, update PRODUCT.md first, then ERD.md to reflect it (and link back), then update TESTING.md's coverage mapping table so every new or changed requirement has a test-layer assignment. Always verify the TESTING.md table reflects the current scope — even when a row already exists for the feature area, it may need updating to cover new requirements.
+4. **Keep documents consistent.** When changing a requirement, update PRODUCT.md first, then ERD.md to reflect it (and link back).
 5. **Do not add requirements to ERD.md that contradict or extend PRODUCT.md without updating PRODUCT.md first.** The PRD drives the ERD, not the other way around.
 6. **Tests are truthier than implementation, but documents are truthier than tests.** If the implementation diverges from the tests, the implementation is assumed buggy. If the tests diverge from the PRD or ERD, the tests are wrong. Fix the code to match the tests; fix the tests to match the documents; update the documents first if the requirement has genuinely changed.
-7. **Every P-\* and E-\* requirement must have test coverage.** See TESTING.md for coverage invariants and the requirement-to-test-layer mapping. A requirement without a corresponding test is a coverage gap that must be addressed.
+7. **Every P-\* and E-\* requirement must have test coverage.** See TESTING.md for coverage invariants. A requirement without a corresponding test is a coverage gap that must be addressed.
 
 ### Content Guidelines
 
@@ -122,6 +122,45 @@ The litmus test: a product manager should read PRODUCT.md without needing to Goo
 
 - Protocol names, file formats, data structures, algorithms, and implementation mechanisms all belong here. This is where technical specificity lives.
 - Add HOW, don't restate WHAT. If an ERD entry reads like a rephrasing of the P-* it links to, it's not adding value.
+
+### Document Structure
+
+Each document follows a canonical structure. Setup generates documents matching this structure. Check validates documents against it — unrecognized sections are flagged as structural drift.
+
+This is the self-cleaning mechanism: when the skill spec changes (e.g., a section is removed or renamed), upgrading the skill updates the canonical structure, the next check flags the now-unrecognized section, and the next setup overwrite regenerates the document to match.
+
+**All documents** share:
+- YAML frontmatter with `scope` and `see-also` fields
+- A title heading: `# {ModuleName}: {Document Type}`
+
+**PRODUCT.md** — flexible structure:
+- `## Overview` *(optional)* — brief product context
+- `## {Functional Area}` — one per area, containing P-\* requirements
+- `## Open Questions` / `## Resolved Questions` *(optional)*
+
+Check validates content patterns (proper P-\* IDs, anchor format) rather than specific section names, since sections are project-specific.
+
+**ERD.md** — flexible structure:
+- `## {N}. {Technical Concern}` — numbered sections containing E-\* requirements with `←` backlinks
+- `## Open Questions` / `## Resolved Questions` *(optional)*
+
+Check validates content patterns (proper E-\* IDs, backlinks) rather than specific section names.
+
+**TESTING.md** — prescribed structure (H2 sections, in order):
+1. `## Source of Truth Hierarchy` *(optional)* — testable components and their truth relationships
+2. `## How We Test` — overview of the testing approach and what can/cannot be tested automatically
+3. `## Coverage Invariants` — project-specific instantiation of the 6 universal coverage invariants
+4. `## Pyramid Shape` — test pyramid visualization showing layer distribution
+5. `## Layer {N}: {Name}` — one section per test layer, detailing what each layer covers
+6. `## Test Infrastructure` — test runner, assertion helpers, fixtures, directory layout
+7. `## Tooling` — tools table (tool → purpose)
+8. `## Coverage Targets` — targets table (layer → target → rationale)
+9. `## What We Deliberately Don't Test` — explicit exclusions with rationale
+
+Any H2 section not in this list is structural drift and should be flagged by check.
+
+**DEPENDENCIES.md** — prescribed structure:
+- `### D-DEP-{ID}: {Name}` — one entry per dependency, with `Used by`, `Where it runs`, `Why external` fields
 
 ### Requirement ID Conventions
 
@@ -332,12 +371,12 @@ Setup uses the `anchors` CLI for deterministic steps (skill installation, scaffo
 
    The user's description of the project (from the conversation context, or a README, design doc, or similar artifact in the repo) is the source material. If the conversation doesn't contain enough context, use `AskUserQuestion` to ask the user to describe the project — what it does, who it's for, and how it works. This is a single open-ended question, not a multi-step interview.
 
-6. **Populate the documents.** Using the research findings (or user description), the Content Guidelines, and the document format conventions described in the ANCHORS Framework section above, populate the skeleton files created by the CLI with real content:
+6. **Populate the documents.** Using the research findings (or user description), the Content Guidelines, Document Structure, and the document format conventions described in the ANCHORS Framework section above, populate the skeleton files created by the CLI with real content. Each document must match its canonical structure exactly — no extra sections, no missing required sections:
 
    - **ANCHORS.md**: Already created by CLI with correct frontmatter. No changes needed.
    - **PRODUCT.md**: Real P-* requirements organized by functional area. Every requirement should describe user-facing behavior, not implementation details. Use the prefix from ANCHORS.md to scope IDs (e.g., prefix `AUTH` → `P-AUTH-LOGIN`).
    - **ERD.md**: Real E-* requirements organized by technical concern, each with a `←` backlink to the P-* requirement it satisfies. Every P-* requirement must have at least one corresponding E-* requirement. **In detached mode**, each E-* requirement should also include `→` forward references to specific file:symbol locations in the target codebase discovered during research.
-   - **TESTING.md**: Real testing strategy — actual test layers, actual coverage mapping from requirements to test layers, actual tooling, actual exclusions. Not boilerplate.
+   - **TESTING.md**: Real testing strategy following the prescribed Document Structure — actual test layers, actual tooling, actual coverage invariants, actual exclusions. Generate exactly the sections listed in the canonical structure. Not boilerplate.
    - **DEPENDENCIES.md**: Real external dependencies with D-DEP-* IDs — or delete the file entirely if there are no true external dependencies.
 
    The populated documents must be internally consistent: every E-* traces to a P-*, the testing strategy covers the actual requirements, and DEPENDENCIES.md only lists things that are genuinely external.
@@ -371,7 +410,7 @@ After the structural check, the skill performs deeper analysis that requires und
 
 1. **For detached modules, resolve the target codebase.** For each detached module: **In-repo** (no `repo` field): resolve `path` relative to the ANCHORS.md file. **External** (with `repo`): access the codebase at `repo` and `ref`, scoped to `path` (defaulting to `/`). Cache or reuse the resolved target for subsequent steps.
 
-2. **Check TESTING.md.** Verify TESTING.md exists. Check that the coverage mapping table references requirement areas that correspond to actual P-* and E-* requirements.
+2. **Check document structure.** Validate each document against the canonical structure defined in the Document Structure section. For TESTING.md, verify all required H2 sections are present and flag any H2 sections not in the canonical list as structural drift. For PRODUCT.md and ERD.md, verify sections contain properly formatted requirements (P-\*/E-\* IDs, backlinks). Report structural drift in the gaps section.
 
 3. **Check DEPENDENCIES.md boundary.** Verify that nothing listed as an external dependency in DEPENDENCIES.md is contradicted by ERD.md requirements showing the system manages it internally (a stale dependency that was since internalized).
 
@@ -432,6 +471,10 @@ Combine the CLI structural report with the semantic analysis into a single summa
 
 #### Open Questions
 - services/auth/PRODUCT.md: OPEN-MFA-FLOW (unresolved)
+
+#### Structural Drift
+- AUTH: TESTING.md has unrecognized section "Coverage Mapping" (not in canonical structure)
+- PAY: TESTING.md missing required section "What We Deliberately Don't Test"
 
 #### DEPENDENCIES.md Boundary Issues
 (none)
