@@ -141,6 +141,7 @@ ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). 
 | **Check subcommand** | `anchors check` outputs structured report |
 | **Check exit codes** | Clean module → 0, errors → 1 |
 | **Upgrade subcommand** | `anchors upgrade` replaces skill files |
+| **Upgrade version comparison** | `anchors upgrade` prints installed and incoming versions, blocks downgrade, allows `--force` override |
 | **Usage** | No args or unknown command prints usage |
 
 ### 2.2 Setup with Existing Files
@@ -229,7 +230,7 @@ ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). 
 | Test Area | What to Test |
 |-----------|-------------|
 | **Mode detection** | ANCHORS.md with `repo` field detected as detached mode; without `repo` detected as embedded (E-ANCHORS-DETACHED-MODE-DETECTION) |
-| **Frontmatter schema** | `repo`, `ref`, `path` fields parsed from ANCHORS.md frontmatter (E-ANCHORS-DETACHED-FRONTMATTER) |
+| **Frontmatter schema** | External: `repo`, `ref`, `path` fields parsed (E-ANCHORS-DETACHED-EXTERNAL-FRONTMATTER); In-repo: `path` only, no `repo`/`ref` (E-ANCHORS-DETACHED-IN-REPO-FRONTMATTER) |
 | **Forward ref format** | `→` references use backtick-wrapped `file:symbol` format, comma-separated (E-ANCHORS-DETACHED-FORWARD-REF-FORMAT) |
 | **Forward ref validation** | Valid refs resolve against target fixture; broken refs (missing file, missing symbol) reported (E-ANCHORS-DETACHED-FORWARD-REF-VALIDATION) |
 | **No inline tag search** | Check in detached mode does not search target code for `P-*`/`E-*` inline tags (E-ANCHORS-DETACHED-NO-INLINE-TAGS) |

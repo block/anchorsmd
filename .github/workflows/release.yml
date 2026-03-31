@@ -16,6 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Stamp version
+        run: echo "${{ github.ref_name }}" > skill/VERSION
+
       - name: Create release tarball
         run: |
           tar -czf anchors-release.tar.gz anchors skill/

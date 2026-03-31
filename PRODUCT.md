@@ -105,11 +105,13 @@ ANCHORS is a requirements-driven development framework consisting of a CLI tool 
 
 - <a id="P-ANCHORS-CLI"></a>**P-ANCHORS-CLI**: ANCHORS provides an `anchors` CLI tool installed globally via a package manager. The CLI handles all deterministic operations that don't require an LLM: scaffolding document skeletons, structural linting, and managing skill files.
 
-- <a id="P-ANCHORS-CLI-SETUP"></a>**P-ANCHORS-CLI-SETUP**: `anchors setup` scaffolds a document skeleton in the target directory. It accepts `--prefix`, `--mode`, and a target path as arguments. It does not install the skill — that is `anchors install`.
+- <a id="P-ANCHORS-CLI-SETUP"></a>**P-ANCHORS-CLI-SETUP**: `anchors setup` scaffolds a document skeleton in the target directory. It accepts `--prefix`, `--mode`, `--skip-existing`, a target path, and detached-mode options (`--path`, `--repo`, `--ref`) as arguments. It does not install the skill — that is `anchors install`.
 
 - <a id="P-ANCHORS-CLI-CHECK"></a>**P-ANCHORS-CLI-CHECK**: `anchors check <path>` performs structural linting on the ANCHORS module at the given path: validates frontmatter, checks backlinks, verifies PRD coverage, and reports gaps. Requires a path to a directory containing `ANCHORS.md`. Runs without an LLM, suitable for CI.
 
 - <a id="P-ANCHORS-CLI-UPGRADE"></a>**P-ANCHORS-CLI-UPGRADE**: `anchors upgrade` updates the skill files in the repo to the latest version bundled with the CLI.
+
+- <a id="P-ANCHORS-UPGRADE-VERSION"></a>**P-ANCHORS-UPGRADE-VERSION**: `anchors upgrade` prints the installed and incoming versions and refuses to downgrade — if the installed skill is newer than the CLI's bundled version, the upgrade aborts. A `--force` flag overrides the downgrade check.
 
 - <a id="P-ANCHORS-CLI-AGENTS"></a>**P-ANCHORS-CLI-AGENTS**: The CLI supports multiple AI coding agents: Claude Code, Amp, Codex, Goose, and ai-rules. The agent is specified via `--agent` flag or auto-detected from the repo. Skill files are copied to the agent-appropriate project-level location.
 

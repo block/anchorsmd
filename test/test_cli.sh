@@ -69,6 +69,18 @@ assert_grep "Check reports open questions" 'Open Questions' "$CLI"
 echo "  [10] E-ANCHORS-CLI-UPGRADE: Upgrade subcommand"
 assert_grep "Upgrade removes existing skill" 'rm -rf' "$CLI"
 assert_grep "Upgrade copies new skill" 'cp -R' "$CLI"
+assert_grep "Upgrade has --force flag" '\-\-force' "$CLI"
+
+echo "  [10b] E-ANCHORS-VERSION-FILE: VERSION file exists in skill directory"
+assert_file_exists "skill/VERSION exists" "$REPO_ROOT/skill/VERSION"
+
+echo "  [10c] E-ANCHORS-VERSION-COMPARE: Version comparison in CLI"
+assert_grep "CLI has version_compare function" 'version_compare' "$CLI"
+assert_grep "CLI reads installed VERSION" 'target_dir.*VERSION' "$CLI"
+assert_grep "CLI reads bundled VERSION" 'SKILL_SOURCE.*VERSION' "$CLI"
+assert_grep "CLI blocks downgrade" 'newer than CLI version' "$CLI"
+assert_grep "CLI detects equal version" 'Already at version' "$CLI"
+assert_grep "CLI shows --force hint" 'Use --force to downgrade' "$CLI"
 
 echo "  [11] E-ANCHORS-SETUP-PREFIX-UNIQUE: Prefix uniqueness check"
 assert_grep "Checks prefix uniqueness" 'check_prefix_unique' "$CLI"
@@ -151,5 +163,67 @@ else
   echo "    ✗ Check did not produce expected report"
   inc_fail
 fi
+
+echo "  [20] Functional: version_compare"
+# Extract the version functions from the CLI into a temp script we can source
+ver_helper="${tmpdir}/_ver_funcs.sh"
+sed -n '/^parse_version()/,/^}/p' "$CLI" > "$ver_helper"
+sed -n '/^version_compare()/,/^}/p' "$CLI" >> "$ver_helper"
+source "$ver_helper"
+
+assert_eq "1.0.0 vs 0.9.0 → newer" "newer" "$(version_compare 1.0.0 0.9.0)"
+assert_eq "0.1.0 vs 0.2.0 → older" "older" "$(version_compare 0.1.0 0.2.0)"
+assert_eq "1.2.3 vs 1.2.3 → equal" "equal" "$(version_compare 1.2.3 1.2.3)"
+assert_eq "2.0.0 vs 1.9.9 → newer" "newer" "$(version_compare 2.0.0 1.9.9)"
+assert_eq "0.0.0-dev vs 0.1.0 → older" "older" "$(version_compare 0.0.0-dev 0.1.0)"
+assert_eq "1.0.0-rc1 vs 1.0.0 → equal" "equal" "$(version_compare 1.0.0-rc1 1.0.0)"
+assert_eq "0.2 vs 0.1.0 → newer (missing patch)" "newer" "$(version_compare 0.2 0.1.0)"
+
+echo "  [21] Functional: upgrade blocks downgrade"
+# Install skill with a "newer" version stamp
+echo "99.0.0" > "${tmpdir}/.claude/skills/anchors/VERSION"
+upgrade_output=$( (cd "${tmpdir}" && "$CLI" upgrade --agent claude) 2>&1 || true )
+inc_test
+if echo "$upgrade_output" | grep -q 'newer than CLI version'; then
+  echo "    ✓ Upgrade blocked when installed version is newer"
+else
+  echo "    ✗ Upgrade should have been blocked (got: ${upgrade_output})"
+  inc_fail
+fi
+
+echo "  [22] Functional: upgrade --force overrides downgrade check"
+force_output=$( (cd "${tmpdir}" && "$CLI" upgrade --agent claude --force) 2>&1 )
+inc_test
+if echo "$force_output" | grep -q 'Upgraded ANCHORS skill'; then
+  echo "    ✓ --force overrides downgrade check"
+else
+  echo "    ✗ --force should have allowed downgrade (got: ${force_output})"
+  inc_fail
+fi
+
+echo "  [23] Functional: upgrade skips when versions are equal"
+# After --force, installed VERSION now matches bundled
+equal_output=$( (cd "${tmpdir}" && "$CLI" upgrade --agent claude) 2>&1 )
+inc_test
+if echo "$equal_output" | grep -q 'Already at version\|already at version'; then
+  echo "    ✓ Upgrade skips when already at same version"
+else
+  echo "    ✗ Upgrade should have skipped for equal versions (got: ${equal_output})"
+  inc_fail
+fi
+
+echo "  [24] Functional: upgrade proceeds when installed VERSION is missing (pre-versioning)"
+rm -f "${tmpdir}/.claude/skills/anchors/VERSION"
+legacy_output=$( (cd "${tmpdir}" && "$CLI" upgrade --agent claude) 2>&1 )
+inc_test
+if echo "$legacy_output" | grep -q 'Upgraded ANCHORS skill'; then
+  echo "    ✓ Upgrade proceeds when no installed VERSION (legacy)"
+else
+  echo "    ✗ Upgrade should have proceeded for legacy install (got: ${legacy_output})"
+  inc_fail
+fi
+
+echo "  [25] Functional: install includes VERSION file"
+assert_file_exists "VERSION copied during install" "${tmpdir}/.claude/skills/anchors/VERSION"
 
 finish_tests

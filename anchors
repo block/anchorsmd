@@ -181,6 +181,36 @@ check_prefix_unique() {
   fi
 }
 
+# E-ANCHORS-VERSION-COMPARE: parse semver and compare two versions
+parse_version() {
+  local ver="${1%%-*}"  # Strip pre-release suffix (e.g., -dev, -rc1)
+  IFS='.' read -r _ver_major _ver_minor _ver_patch <<< "$ver"
+  _ver_major="${_ver_major:-0}"
+  _ver_minor="${_ver_minor:-0}"
+  _ver_patch="${_ver_patch:-0}"
+}
+
+# Compare two semver strings. Prints "newer", "equal", or "older"
+# describing the first version relative to the second.
+version_compare() {
+  local v1="$1" v2="$2"
+  parse_version "$v1"
+  local a_major=$_ver_major a_minor=$_ver_minor a_patch=$_ver_patch
+  parse_version "$v2"
+  local b_major=$_ver_major b_minor=$_ver_minor b_patch=$_ver_patch
+
+  if (( a_major != b_major )); then
+    (( a_major > b_major )) && echo "newer" || echo "older"; return
+  fi
+  if (( a_minor != b_minor )); then
+    (( a_minor > b_minor )) && echo "newer" || echo "older"; return
+  fi
+  if (( a_patch != b_patch )); then
+    (( a_patch > b_patch )) && echo "newer" || echo "older"; return
+  fi
+  echo "equal"
+}
+
 # --- Subcommands ---
 
 # E-ANCHORS-CLI-INSTALL: install subcommand — one-time repo setup
@@ -602,9 +632,11 @@ cmd_check() {
 # E-ANCHORS-CLI-UPGRADE: upgrade subcommand
 cmd_upgrade() {
   local agent_flag=""
+  local force=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --agent) agent_flag="$2"; shift 2 ;;
+      --force) force=true; shift ;;
       *) echo "Error: Unknown option '$1'" >&2; return 1 ;;
     esac
   done
@@ -622,6 +654,42 @@ cmd_upgrade() {
   if [ ! -d "${target_dir}" ]; then
     echo "Error: No skill found at ${target_dir}. Run 'anchors install' first." >&2
     return 1
+  fi
+
+  # E-ANCHORS-VERSION-COMPARE: compare installed and bundled versions
+  local installed_version=""
+  local bundled_version=""
+
+  if [ -f "${target_dir}/VERSION" ]; then
+    installed_version="$(tr -d '[:space:]' < "${target_dir}/VERSION")"
+  fi
+  if [ -f "${SKILL_SOURCE}/VERSION" ]; then
+    bundled_version="$(tr -d '[:space:]' < "${SKILL_SOURCE}/VERSION")"
+  fi
+
+  if ! $force && [ -n "${installed_version}" ] && [ -n "${bundled_version}" ]; then
+    local cmp
+    cmp="$(version_compare "${installed_version}" "${bundled_version}")"
+    case "${cmp}" in
+      newer)
+        echo "Error: Installed version (${installed_version}) is newer than CLI version (${bundled_version})." >&2
+        echo "Use --force to downgrade." >&2
+        return 1
+        ;;
+      equal)
+        echo "Already at version ${installed_version}, nothing to upgrade."
+        return 0
+        ;;
+      older)
+        echo "Upgrading: ${installed_version} → ${bundled_version}"
+        ;;
+    esac
+  elif [ -n "${bundled_version}" ]; then
+    if $force; then
+      echo "Forcing upgrade to ${bundled_version}"
+    else
+      echo "Upgrading to ${bundled_version}"
+    fi
   fi
 
   rm -rf "${target_dir}"
@@ -644,7 +712,7 @@ usage() {
   echo "  install           Install the ANCHORS skill and agent instructions in this repo"
   echo "  setup [path]      Scaffold ANCHORS document skeletons in a directory"
   echo "  check <path>      Check traceability and consistency of a module"
-  echo "  upgrade           Update the skill files to the latest version"
+  echo "  upgrade           Update the skill files to the latest version (refuses to downgrade)"
   echo ""
   echo "Install options:"
   echo "  --agent AGENT      claude, goose, amp, codex, or airules (auto-detected if omitted)"
@@ -656,6 +724,10 @@ usage() {
   echo "  --path PATH        Path to target code, relative to ANCHORS.md (detached mode)"
   echo "  --repo REPO        Target repo URL/path (external detached)"
   echo "  --ref REF          Target ref/branch (external detached, default: main)"
+  echo ""
+  echo "Upgrade options:"
+  echo "  --agent AGENT      claude, goose, amp, codex, or airules (auto-detected if omitted)"
+  echo "  --force            Allow downgrading to an older version"
   echo ""
   echo "Examples:"
   echo "  anchors install --agent claude"

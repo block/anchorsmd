@@ -173,12 +173,23 @@ ANCHORS consists of two components: an `anchors` CLI (bash script with subcomman
 - <a id="E-ANCHORS-CLI-CHECK-STRUCTURAL"></a>**E-ANCHORS-CLI-CHECK-STRUCTURAL**: `anchors check <path>` requires a path to a directory containing `ANCHORS.md`. It performs all structural validation on that single module without an LLM: document presence, frontmatter validation, backlink checking, PRD coverage, ID extraction, open question scanning, and forward reference validation for detached modules. Outputs a structured report and exits with non-zero status if errors are found.
   ← [P-ANCHORS-CLI-CHECK](PRODUCT.md#P-ANCHORS-CLI-CHECK)
 
-- <a id="E-ANCHORS-CLI-UPGRADE"></a>**E-ANCHORS-CLI-UPGRADE**: `anchors upgrade` detects the installed skill location (same agent detection as setup), removes the existing skill directory, and copies the current version bundled with the CLI. Prints the previous and new version if version info is available.
+- <a id="E-ANCHORS-CLI-UPGRADE"></a>**E-ANCHORS-CLI-UPGRADE**: `anchors upgrade [--force]` detects the installed skill location (same agent detection as setup), compares the installed and bundled versions (see E-ANCHORS-VERSION-COMPARE), and if the upgrade should proceed, removes the existing skill directory and copies the current version bundled with the CLI. Prints the previous and new version.
   ← [P-ANCHORS-CLI-UPGRADE](PRODUCT.md#P-ANCHORS-CLI-UPGRADE)
+  ← [P-ANCHORS-UPGRADE-VERSION](PRODUCT.md#P-ANCHORS-UPGRADE-VERSION)
 
 ---
 
-## 9. Detached Mode
+## 9. Versioning
+
+- <a id="E-ANCHORS-VERSION-FILE"></a>**E-ANCHORS-VERSION-FILE**: The `skill/` directory includes a `VERSION` file containing a semver string (e.g., `1.2.0`). During development it reads `0.0.0-dev`. The release workflow stamps the git tag into this file before building the tarball. When the skill is copied during `install` or `upgrade`, the VERSION file is included.
+  ← [P-ANCHORS-UPGRADE-VERSION](PRODUCT.md#P-ANCHORS-UPGRADE-VERSION)
+
+- <a id="E-ANCHORS-VERSION-COMPARE"></a>**E-ANCHORS-VERSION-COMPARE**: `anchors upgrade` reads the installed `{target_dir}/VERSION` and the bundled `${SKILL_SOURCE}/VERSION`, strips any pre-release suffix (text after `-`), and compares `major.minor.patch` numerically. If the installed version is strictly newer, abort with error showing both versions (exit 1). If versions are equal, print "already at version X" and exit 0. If the installed version is older or the installed VERSION file is missing (pre-versioning install), proceed with the upgrade. The `--force` flag bypasses the comparison entirely.
+  ← [P-ANCHORS-UPGRADE-VERSION](PRODUCT.md#P-ANCHORS-UPGRADE-VERSION)
+
+---
+
+## 10. Detached Mode
 
 - <a id="E-ANCHORS-EMBEDDED-DEFAULT"></a>**E-ANCHORS-EMBEDDED-DEFAULT**: When `ANCHORS.md` frontmatter contains no `mode` field (or any value other than `detached`), the module operates in embedded mode. All existing behavior applies: inline code tags, audit code search, init research against local files. This is the default and requires no additional configuration.
   ← [P-ANCHORS-MODE-EMBEDDED](PRODUCT.md#P-ANCHORS-MODE-EMBEDDED)
