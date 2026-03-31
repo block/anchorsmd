@@ -68,21 +68,6 @@ The production implementation is the `anchors` CLI script and `SKILL.md` execute
 
 ---
 
-## Coverage Mapping: Requirements to Test Layers
-
-| Functional Area | Primary Layer | Secondary Layer |
-|-----------------|---------------|-----------------|
-| **Document format** (P-ANCHORS-DOC-SET, E-ANCHORS-*-FORMAT) | Unit (format validation) | Integration (fixture format checks) |
-| **Truth hierarchy** (P-ANCHORS-TRUTH-HIERARCHY, P-ANCHORS-DISAGREEMENT) | Static (verify SKILL.md contains all rules) | Self-check (check the ANCHORS repo itself) |
-| **Setup workflow** (P-ANCHORS-SETUP-*) | Integration (CLI setup in temp dirs) | E2E (full `/anchors setup`, manual) |
-| **Check workflow** (P-ANCHORS-CHECK-*) | Integration (CLI check on fixtures) | E2E (full `/anchors check`, manual) |
-| **Monorepo support** (P-ANCHORS-MONO-*) | Integration (multi-module fixture repo) | E2E (check with cross-module refs) |
-| **Routing** (P-ANCHORS-ROUTE-*) | Static (verify SKILL.md routing table covers setup, check, embed) | E2E (interactive prompts, manual) |
-| **Detached mode** (P-ANCHORS-DETACHED-*, P-ANCHORS-MODE-*) | Static (verify SKILL.md contains mode detection, forward ref format, embed steps) | Integration (detached fixture with forward ref validation) |
-| **CLI** (P-ANCHORS-CLI-*) | Integration (CLI subcommand tests) | E2E (full workflow with skill, manual) |
-
----
-
 ## Pyramid Shape
 
 ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). The pyramid reflects this dual nature — CLI tests are automated, skill tests are static verification plus manual E2E.

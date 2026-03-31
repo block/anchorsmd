@@ -113,7 +113,7 @@ ANCHORS consists of two components: an `anchors` CLI (bash script with subcomman
 - <a id="E-ANCHORS-CHECK-OPEN-SCAN"></a>**E-ANCHORS-CHECK-OPEN-SCAN**: Scan all ANCHORS documents for `OPEN-*` strings not preceded by `~~` (which indicates resolved). Report each with its source file.
   ← [P-ANCHORS-CHECK-OPEN](PRODUCT.md#P-ANCHORS-CHECK-OPEN)
 
-- <a id="E-ANCHORS-CHECK-REPORT-FORMAT"></a>**E-ANCHORS-CHECK-REPORT-FORMAT**: The check report is structured markdown with sections: Modules (list with prefix, doc count), Traceability (aggregate stats), and Gaps (categorized: missing backlinks, uncovered PRD, untraced requirements, missing test refs, stale refs, open questions, dependency boundary issues). The CLI produces the structural report; the skill adds semantic analysis on top.
+- <a id="E-ANCHORS-CHECK-REPORT-FORMAT"></a>**E-ANCHORS-CHECK-REPORT-FORMAT**: The check report is structured markdown with sections: Modules (list with prefix, doc count), Traceability (aggregate stats), and Gaps (categorized: missing backlinks, uncovered PRD, untraced requirements, missing test refs, stale refs, structural drift, open questions, dependency boundary issues). The CLI produces the structural report; the skill adds semantic analysis on top.
   ← [P-ANCHORS-CHECK-REPORT](PRODUCT.md#P-ANCHORS-CHECK-REPORT)
 
 ---

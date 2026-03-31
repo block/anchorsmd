@@ -61,7 +61,7 @@ Creates five files in the target directory:
 | `ANCHORS.md` | Module marker with `prefix` in frontmatter |
 | `PRODUCT.md` | Product requirements (source of truth) |
 | `ERD.md` | Engineering requirements (derived from PRD) |
-| `TESTING.md` | Testing strategy and coverage mapping |
+| `TESTING.md` | Testing strategy — pyramid, invariants, tooling |
 | `DEPENDENCIES.md` | External dependencies |
 
 The CLI creates the skeleton. The skill populates it with real content.

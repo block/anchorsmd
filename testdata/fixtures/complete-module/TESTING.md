@@ -7,10 +7,10 @@ see-also:
 
 # Auth: Testing Strategy
 
-## Coverage Mapping
+## Test Layers
 
-| Functional Area | Primary Layer | Secondary Layer |
-|-----------------|---------------|-----------------|
-| **Authentication** (P-AUTH-LOGIN, E-AUTH-HASH) | Unit (bcrypt) | Integration (login flow) |
-| **Sessions** (P-AUTH-SESSION, E-AUTH-JWT) | Unit (JWT) | Integration (expiry) |
-| **Logout** (P-AUTH-LOGOUT, E-AUTH-INVALIDATE) | Integration (revocation) | E2E (full logout) |
+| Layer | Scope | Examples |
+|-------|-------|----------|
+| **Unit** | Individual functions, algorithms | bcrypt hashing, JWT signing |
+| **Integration** | Component interactions, data flow | Login flow, session expiry |
+| **E2E** | Full user workflows | Complete login-to-logout cycle |

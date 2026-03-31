@@ -25,6 +25,7 @@ assert_grep "Report has Uncovered Product Requirements" 'Uncovered Product Requi
 assert_grep "Report has Untraced Requirements" 'Untraced Requirements' "$SKILL_FILE"
 assert_grep "Report has Requirements Without Test References" 'Without Test References' "$SKILL_FILE"
 assert_grep "Report has Stale Code References" 'Stale Code References' "$SKILL_FILE"
+assert_grep "Report has Structural Drift" 'Structural Drift' "$SKILL_FILE"
 assert_grep "Report has Open Questions" 'Open Questions' "$SKILL_FILE"
 assert_grep "Report has DEPENDENCIES.md Boundary Issues" 'DEPENDENCIES.md Boundary' "$SKILL_FILE"
 
@@ -36,6 +37,7 @@ assert_grep "SKILL.md describes disagreement rules" 'Disagreement|disagree' "$SK
 assert_grep "SKILL.md describes monorepo support" 'Monorepo|monorepo' "$SKILL_FILE"
 assert_grep "SKILL.md describes code traceability" 'Code Traceability|code traceability|Code traceability' "$SKILL_FILE"
 assert_grep "SKILL.md describes prefix uniqueness" 'prefix.*unique|unique.*prefix|Prefixes must be unique' "$SKILL_FILE"
+assert_grep "SKILL.md describes document structure" 'Document Structure|canonical structure' "$SKILL_FILE"
 
 echo "  [1.2.5] SKILL.md has valid frontmatter"
 assert_grep "SKILL.md has name field" '^name:' "$SKILL_FILE"
