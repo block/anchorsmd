@@ -2,7 +2,7 @@
 scope: Automated testing strategy — test pyramid, tooling, and coverage targets.
 see-also:
   - PRODUCT.md — product requirements that define acceptance criteria.
-  - ERD.md — technical requirements and interfaces under test.
+  - ENGINEERING.md — technical requirements and interfaces under test.
 ---
 
 # Auth: Testing Strategy

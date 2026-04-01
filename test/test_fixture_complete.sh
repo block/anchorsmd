@@ -1,7 +1,6 @@
 #!/bin/bash
 # Layer 2: Integration — Complete module fixture
-# Tests: E-ANCHORS-CHECK-DOC-PRESENCE, E-ANCHORS-CHECK-BACKLINK-CHECK,
-#        E-ANCHORS-CHECK-PRD-COVERAGE, E-ANCHORS-CHECK-ID-EXTRACT
+# Tests: E-ANCHORS-CHECK-COMPLETENESS
 # Validates TESTING.md §2.3: audit on well-formed repo
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"
@@ -15,7 +14,7 @@ assert_eq "Prefix extracted correctly" "AUTH" "$prefix"
 
 echo "  [2.3.2] Document presence (4/4)"
 assert_file_exists "PRODUCT.md exists" "$FIXTURE/PRODUCT.md"
-assert_file_exists "ERD.md exists" "$FIXTURE/ERD.md"
+assert_file_exists "ENGINEERING.md exists" "$FIXTURE/ENGINEERING.md"
 assert_file_exists "TESTING.md exists" "$FIXTURE/TESTING.md"
 assert_file_exists "DEPENDENCIES.md exists" "$FIXTURE/DEPENDENCIES.md"
 
@@ -25,16 +24,16 @@ p_count=$(echo "$p_ids" | wc -l | tr -d ' ')
 assert_eq "Found 3 P-* IDs" "3" "$p_count"
 
 echo "  [2.3.4] E-* ID extraction"
-e_ids=$(grep -oE "E-AUTH-[A-Z0-9-]+" "$FIXTURE/ERD.md" | sort -u)
+e_ids=$(grep -oE "E-AUTH-[A-Z0-9-]+" "$FIXTURE/ENGINEERING.md" | sort -u)
 e_count=$(echo "$e_ids" | wc -l | tr -d ' ')
 assert_eq "Found 3 E-* IDs" "3" "$e_count"
 
 echo "  [2.3.5] Backlink coverage (100%)"
 missing=0
 while IFS= read -r eid; do
-  line_num=$(grep -n "<a id=\"${eid}\">" "$FIXTURE/ERD.md" | head -1 | cut -d: -f1)
+  line_num=$(grep -n "<a id=\"${eid}\">" "$FIXTURE/ENGINEERING.md" | head -1 | cut -d: -f1)
   if [[ -n "$line_num" ]]; then
-    context=$(sed -n "${line_num},$((line_num + 2))p" "$FIXTURE/ERD.md")
+    context=$(sed -n "${line_num},$((line_num + 2))p" "$FIXTURE/ENGINEERING.md")
     if ! echo "$context" | grep -qE '← \[P-'; then
       echo "    ✗ ${eid} missing backlink"
       missing=$((missing + 1))
@@ -51,7 +50,7 @@ echo "  [2.3.6] PRD coverage (100%)"
 uncovered=0
 while IFS= read -r pid; do
   inc_test
-  if ! grep -qE "$pid" "$FIXTURE/ERD.md"; then
+  if ! grep -qE "$pid" "$FIXTURE/ENGINEERING.md"; then
     echo "    ✗ ${pid} not covered by E-*"
     uncovered=$((uncovered + 1))
     inc_fail

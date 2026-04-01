@@ -1,7 +1,7 @@
 ---
 scope: Product requirements.
 see-also:
-  - ERD.md
+  - ENGINEERING.md
 ---
 
 # Module A: Product Requirements

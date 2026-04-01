@@ -1,8 +1,6 @@
 #!/bin/bash
 # Layer 2: Integration — Multi-module fixture
-# Tests: E-ANCHORS-MONO-MODULE-DETECTION, E-ANCHORS-CHECK-PREFIX-COLLISION,
-#        E-ANCHORS-CHECK-CROSS-RESOLVE, E-ANCHORS-MONO-RELATIVE-PATHS,
-#        E-ANCHORS-MONO-PARTIAL-MODULES
+# Tests: E-ANCHORS-MODULE-INDEPENDENCE, E-ANCHORS-CHECK-COMPLETENESS
 # Validates TESTING.md §2.5: cross-module references
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"
@@ -24,8 +22,8 @@ unique_count=$(echo -e "$prefixes" | sort -u | grep -c '[A-Z]')
 assert_eq "All prefixes unique" "$module_count" "$unique_count"
 
 echo "  [2.5.3] Valid cross-module reference resolves"
-# payments/ERD.md references ../auth/PRODUCT.md#P-MAUTH-LOGIN
-cross_ref_file="$FIXTURE/payments/ERD.md"
+# payments/ENGINEERING.md references ../auth/PRODUCT.md#P-MAUTH-LOGIN
+cross_ref_file="$FIXTURE/payments/ENGINEERING.md"
 # Extract the relative path from the cross-module backlink
 ref_path=$(grep -oE '\.\./auth/PRODUCT\.md' "$cross_ref_file" | head -1)
 inc_test
@@ -38,7 +36,7 @@ if [[ -n "$ref_path" ]]; then
     inc_fail
   fi
 else
-  echo "    ✗ No cross-module reference found in payments/ERD.md"
+  echo "    ✗ No cross-module reference found in payments/ENGINEERING.md"
   inc_fail
 fi
 
@@ -82,17 +80,17 @@ else
   inc_fail
 fi
 
-echo "  [2.5.5] E-ANCHORS-MONO-RELATIVE-PATHS: Cross-module refs use relative paths"
-# The backlink in payments/ERD.md should use a relative path to ../auth/PRODUCT.md
-assert_grep "Cross-ref uses relative path" '\.\./auth/PRODUCT\.md#P-MAUTH-LOGIN' "$FIXTURE/payments/ERD.md"
+echo "  [2.5.5] E-ANCHORS-MODULE-INDEPENDENCE: Cross-module refs use relative paths"
+# The backlink in payments/ENGINEERING.md should use a relative path to ../auth/PRODUCT.md
+assert_grep "Cross-ref uses relative path" '\.\./auth/PRODUCT\.md#P-MAUTH-LOGIN' "$FIXTURE/payments/ENGINEERING.md"
 # Verify it's in a backlink context (← [...](relative path))
-assert_grep "Cross-ref uses ← backlink format" '← \[P-MAUTH-LOGIN\]\(\.\./auth/PRODUCT\.md#P-MAUTH-LOGIN\)' "$FIXTURE/payments/ERD.md"
+assert_grep "Cross-ref uses ← backlink format" '← \[P-MAUTH-LOGIN\]\(\.\./auth/PRODUCT\.md#P-MAUTH-LOGIN\)' "$FIXTURE/payments/ENGINEERING.md"
 
-echo "  [2.5.6] E-ANCHORS-MONO-PARTIAL-MODULES: Modules without all 4 docs are valid"
-# auth module has only PRODUCT.md and ERD.md (no TESTING.md, no DEPENDENCIES.md)
+echo "  [2.5.6] E-ANCHORS-MODULE-INDEPENDENCE: Modules without all 4 docs are valid"
+# auth module has only PRODUCT.md and ENGINEERING.md (no TESTING.md, no DEPENDENCIES.md)
 assert_file_exists "auth has ANCHORS.md" "$FIXTURE/auth/ANCHORS.md"
 assert_file_exists "auth has PRODUCT.md" "$FIXTURE/auth/PRODUCT.md"
-assert_file_exists "auth has ERD.md" "$FIXTURE/auth/ERD.md"
+assert_file_exists "auth has ENGINEERING.md" "$FIXTURE/auth/ENGINEERING.md"
 inc_test
 if [[ ! -f "$FIXTURE/auth/TESTING.md" ]]; then
   echo "    ✓ auth module has no TESTING.md (partial module, valid)"
@@ -107,7 +105,7 @@ else
   echo "    ✗ auth should not have DEPENDENCIES.md for this test"
   inc_fail
 fi
-# payments module also partial — only PRODUCT.md and ERD.md
+# payments module also partial — only PRODUCT.md and ENGINEERING.md
 inc_test
 if [[ ! -f "$FIXTURE/payments/TESTING.md" ]]; then
   echo "    ✓ payments module has no TESTING.md (partial module, valid)"

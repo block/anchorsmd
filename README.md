@@ -60,7 +60,7 @@ Creates five files in the target directory:
 |------|---------|
 | `ANCHORS.md` | Module marker with `prefix` in frontmatter |
 | `PRODUCT.md` | Product requirements (source of truth) |
-| `ERD.md` | Engineering requirements (derived from PRD) |
+| `ENGINEERING.md` | Engineering architecture — rules and principles |
 | `TESTING.md` | Testing strategy — pyramid, invariants, tooling |
 | `DEPENDENCIES.md` | External dependencies |
 
@@ -81,16 +81,16 @@ The CLI performs structural checks (deterministic). The skill adds semantic anal
 
 ## How it works
 
-ANCHORS defines a truth hierarchy:
+ANCHORS defines a truth hierarchy for conflict resolution:
 
 ```
-PRODUCT.md        ← source of truth (what)
-  → ERD.md        ← technical design (how), must satisfy PRD
-    → Tests       ← executable spec, truthier than implementation
-      → Code      ← must satisfy everything above
+PRODUCT.md         ← what to build (authoritative on behavior)
+ENGINEERING.md     ← how to build it (authoritative on architecture)
+  Tests            ← executable spec, truthier than implementation
+    Code           ← must satisfy everything above
 ```
 
-When things disagree, higher-authority documents win. Every `E-*` requirement links back to the `P-*` it satisfies. The check verifies these links are complete and consistent.
+PRODUCT.md and ENGINEERING.md are peers with different authority domains. Engineering rules govern architecture and must not contradict product requirements — when they conflict, PRODUCT.md wins. Every `E-*` requirement links back to the `P-*` requirements it supports. The check verifies these links are complete and consistent.
 
 ## Embedded vs detached mode
 
@@ -98,7 +98,7 @@ ANCHORS operates in two modes:
 
 **Embedded** (default) — docs live in the same repo as the code. Requirement IDs are tagged inline in source and test files. Setup researches the local codebase. Check searches local code for traceability. This is what you use when you own the repo.
 
-**Detached** — docs live separately from the code they describe. `ANCHORS.md` frontmatter includes `mode: detached`, and ERD.md uses `→` forward references to trace requirements to code locations in the target. The target code is never modified. Detached mode works both within the same repo (in-repo) and across repos (external).
+**Detached** — docs live separately from the code they describe. `ANCHORS.md` frontmatter includes `mode: detached`, and ENGINEERING.md uses `→` forward references to trace requirements to code locations in the target. The target code is never modified. Detached mode works both within the same repo (in-repo) and across repos (external).
 
 ### When to use detached mode
 
@@ -149,9 +149,9 @@ Check resolves the target (locally for in-repo, clone/fetch for external) and ve
 
 If you find detached docs useful and want to fully adopt ANCHORS in the codebase, run `/anchors embed`. This:
 
-1. Reads the `→` forward references from ERD.md
+1. Reads the `→` forward references from ENGINEERING.md
 2. Adds inline requirement tags to the source files at each referenced location
-3. Removes the `→` lines from ERD.md
+3. Removes the `→` lines from ENGINEERING.md
 4. Removes `mode`/`repo`/`ref`/`path` from ANCHORS.md, switching to embedded mode
 
 The code must be locally accessible (already local for in-repo; for external, you must have a local clone). After embedding, `/anchors check` searches local code for inline tags like any embedded module.

@@ -1,7 +1,7 @@
 ---
 scope: Product requirements for detached API fixture.
 see-also:
-  - ERD.md — engineering requirements derived from this document.
+  - ENGINEERING.md — engineering architecture; must not contradict this document.
 ---
 
 # Detached API: Product Requirements
