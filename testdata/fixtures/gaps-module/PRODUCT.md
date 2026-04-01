@@ -1,7 +1,7 @@
 ---
 scope: Product requirements — observable behavior, outcomes, and qualities. No implementation approach.
 see-also:
-  - ERD.md — technical requirements derived from this document.
+  - ENGINEERING.md — engineering architecture; must not contradict this document.
   - TESTING.md — testing strategy covering these requirements.
   - DEPENDENCIES.md — external dependencies the system cannot supply itself.
 ---

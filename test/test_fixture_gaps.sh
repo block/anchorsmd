@@ -1,7 +1,6 @@
 #!/bin/bash
 # Layer 2: Integration — Gaps module fixture
-# Tests: E-ANCHORS-CHECK-BACKLINK-CHECK, E-ANCHORS-CHECK-PRD-COVERAGE,
-#        E-ANCHORS-CHECK-OPEN-SCAN
+# Tests: E-ANCHORS-CHECK-COMPLETENESS
 # Validates TESTING.md §2.4: audit on repo with gaps
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"
@@ -11,8 +10,8 @@ FIXTURE="$FIXTURES_DIR/gaps-module"
 echo "  [2.4.1] Detect missing backlinks"
 # E-PAY-IDEMPOTENT has no ← backlink (deliberate gap)
 eid="E-PAY-IDEMPOTENT"
-line_num=$(grep -n "<a id=\"${eid}\">" "$FIXTURE/ERD.md" | head -1 | cut -d: -f1)
-context=$(sed -n "${line_num},$((line_num + 2))p" "$FIXTURE/ERD.md")
+line_num=$(grep -n "<a id=\"${eid}\">" "$FIXTURE/ENGINEERING.md" | head -1 | cut -d: -f1)
+context=$(sed -n "${line_num},$((line_num + 2))p" "$FIXTURE/ENGINEERING.md")
 inc_test
 if echo "$context" | grep -qE '← \[P-'; then
   echo "    ✗ ${eid} should NOT have a backlink (test fixture is wrong)"
@@ -24,16 +23,16 @@ fi
 echo "  [2.4.2] Detect uncovered PRD requirements"
 # P-PAY-CART and P-PAY-RECEIPT have no E-* coverage
 inc_test
-if grep -qE 'P-PAY-CART' "$FIXTURE/ERD.md"; then
-  echo "    ✗ P-PAY-CART should NOT be in ERD (test fixture is wrong)"
+if grep -qE 'P-PAY-CART' "$FIXTURE/ENGINEERING.md"; then
+  echo "    ✗ P-PAY-CART should NOT be in ENGINEERING.md (test fixture is wrong)"
   inc_fail
 else
   echo "    ✓ P-PAY-CART correctly uncovered (gap detected)"
 fi
 
 inc_test
-if grep -qE 'P-PAY-RECEIPT' "$FIXTURE/ERD.md"; then
-  echo "    ✗ P-PAY-RECEIPT should NOT be in ERD (test fixture is wrong)"
+if grep -qE 'P-PAY-RECEIPT' "$FIXTURE/ENGINEERING.md"; then
+  echo "    ✗ P-PAY-RECEIPT should NOT be in ENGINEERING.md (test fixture is wrong)"
   inc_fail
 else
   echo "    ✓ P-PAY-RECEIPT correctly uncovered (gap detected)"

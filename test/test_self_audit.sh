@@ -1,13 +1,12 @@
 #!/bin/bash
 # Layer 2/3: Self-audit — Validate the ANCHORS repo's own documents
-# Tests: E-ANCHORS-CHECK-BACKLINK-CHECK, E-ANCHORS-CHECK-PRD-COVERAGE,
-#        E-ANCHORS-CHECK-ID-EXTRACT, E-ANCHORS-MARKER-FORMAT
+# Tests: E-ANCHORS-CHECK-COMPLETENESS, E-ANCHORS-DOC-INTEGRITY
 # TESTING.md: "running /anchors audit on the ANCHORS repo itself is a form of integration test"
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"
 
 PRODUCT="$REPO_ROOT/PRODUCT.md"
-ERD="$REPO_ROOT/ERD.md"
+ERD="$REPO_ROOT/ENGINEERING.md"
 TESTING="$REPO_ROOT/TESTING.md"
 ANCHORS="$REPO_ROOT/ANCHORS.md"
 
@@ -18,7 +17,7 @@ assert_eq "Prefix is ANCHORS" "ANCHORS" "$prefix"
 
 echo "  [2.2] All four documents exist"
 assert_file_exists "PRODUCT.md exists" "$PRODUCT"
-assert_file_exists "ERD.md exists" "$ERD"
+assert_file_exists "ENGINEERING.md exists" "$ERD"
 assert_file_exists "TESTING.md exists" "$TESTING"
 # DEPENDENCIES.md is optional for this project (no external deps beyond Claude Code)
 
@@ -35,7 +34,7 @@ done <<< "$p_ids"
 echo "  [2.4] All E-* requirements have IDs in correct format"
 e_ids=$(grep -oE 'E-ANCHORS-[A-Z0-9-]+' "$ERD" | sort -u)
 e_count=$(echo "$e_ids" | wc -l | tr -d ' ')
-assert_true "ERD.md has E-* requirements (found ${e_count})" [[ "$e_count" -gt 0 ]]
+assert_true "ENGINEERING.md has E-* requirements (found ${e_count})" [[ "$e_count" -gt 0 ]]
 
 while IFS= read -r eid; do
   assert_grep "E-ID ${eid} has HTML anchor" "<a id=\"${eid}\">" "$ERD"
@@ -45,11 +44,11 @@ echo "  [2.5] Every E-* has a ← backlink to P-*"
 # For each E-* anchor, check that a ← [P-ANCHORS-*] appears nearby
 missing_backlinks=0
 while IFS= read -r eid; do
-  # Find the line number of the anchor, then check if ← appears within 2 lines
+  # Find the line number of the anchor, then check if ← appears within 5 lines
   line_num=$(grep -n "<a id=\"${eid}\">" "$ERD" | head -1 | cut -d: -f1)
   if [[ -n "$line_num" ]]; then
-    # Check lines line_num through line_num+2 for a backlink
-    context=$(sed -n "${line_num},$((line_num + 2))p" "$ERD")
+    # Check lines line_num through line_num+5 for a backlink
+    context=$(sed -n "${line_num},$((line_num + 5))p" "$ERD")
     if ! echo "$context" | grep -qE '← \[P-'; then
       echo "    ✗ ${eid} missing ← backlink"
       missing_backlinks=$((missing_backlinks + 1))
@@ -67,7 +66,7 @@ uncovered=0
 while IFS= read -r pid; do
   inc_test
   if ! grep -qE "$pid" "$ERD"; then
-    echo "    ✗ ${pid} has no E-* coverage in ERD.md"
+    echo "    ✗ ${pid} has no E-* coverage in ENGINEERING.md"
     uncovered=$((uncovered + 1))
     inc_fail
   fi

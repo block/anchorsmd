@@ -1,7 +1,7 @@
 ---
 scope: External dependencies — tools and services that must be present in the environment.
 see-also:
-  - ERD.md — engineering requirements.
+  - ENGINEERING.md — engineering requirements.
   - PRODUCT.md — product requirements.
 ---
 

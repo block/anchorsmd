@@ -1,7 +1,7 @@
 ---
 scope: Product requirements — observable behavior, outcomes, and qualities. No implementation approach.
 see-also:
-  - ERD.md — technical requirements derived from this document.
+  - ENGINEERING.md — engineering architecture; must not contradict this document.
   - TESTING.md — testing strategy covering these requirements.
   - DEPENDENCIES.md — external dependencies the system cannot supply itself.
 ---
@@ -29,11 +29,11 @@ ANCHORS is a requirements-driven development framework consisting of a CLI tool 
 
 ## 1. Document Framework
 
-- <a id="P-ANCHORS-DOC-SET"></a>**P-ANCHORS-DOC-SET**: A module's document set consists of a marker file (`ANCHORS.md`) plus up to four documents: `PRODUCT.md`, `ERD.md`, `TESTING.md`, and `DEPENDENCIES.md`. Not every module requires all four.
+- <a id="P-ANCHORS-DOC-SET"></a>**P-ANCHORS-DOC-SET**: A module's document set consists of a marker file (`ANCHORS.md`) plus up to four documents: `PRODUCT.md`, `ENGINEERING.md`, `TESTING.md`, and `DEPENDENCIES.md`. Not every module requires all four.
 
-- <a id="P-ANCHORS-TRUTH-HIERARCHY"></a>**P-ANCHORS-TRUTH-HIERARCHY**: Documents form a strict truth hierarchy: PRODUCT.md → ERD.md → DEPENDENCIES.md, with TESTING.md covering both PRODUCT.md and ERD.md. Tests are truthier than implementation; documents are truthier than tests.
+- <a id="P-ANCHORS-TRUTH-HIERARCHY"></a>**P-ANCHORS-TRUTH-HIERARCHY**: Documents form a strict truth hierarchy: PRODUCT.md → ENGINEERING.md → DEPENDENCIES.md, with TESTING.md covering both PRODUCT.md and ENGINEERING.md. Tests are truthier than implementation; documents are truthier than tests.
 
-- <a id="P-ANCHORS-DISAGREEMENT"></a>**P-ANCHORS-DISAGREEMENT**: When artifacts disagree, the framework defines deterministic resolution rules: implementation yields to tests, tests yield to documents, ERD yields to PRD, and TESTING.md yields to PRD/ERD.
+- <a id="P-ANCHORS-DISAGREEMENT"></a>**P-ANCHORS-DISAGREEMENT**: When artifacts disagree, the framework defines deterministic resolution rules: implementation yields to tests, tests yield to documents, ENGINEERING.md yields to PRD, and TESTING.md yields to PRD/ENGINEERING.md.
 
 - <a id="P-ANCHORS-REQ-IDS"></a>**P-ANCHORS-REQ-IDS**: Requirements use stable anchor IDs with prefixes: `P-*` for product requirements, `E-*` for engineering requirements, `D-DEP-*` for dependencies. Every `E-*` must backlink to a `P-*` via `←`.
 
@@ -89,7 +89,7 @@ ANCHORS is a requirements-driven development framework consisting of a CLI tool 
 
 - <a id="P-ANCHORS-MONO-CROSS-REF"></a>**P-ANCHORS-MONO-CROSS-REF**: Modules can reference requirements in other modules using relative paths (e.g., `← [P-PAY-CART](../checkout/PRODUCT.md#P-PAY-CART)`).
 
-- <a id="P-ANCHORS-MONO-PARTIAL"></a>**P-ANCHORS-MONO-PARTIAL**: Not every module needs all four documents. Infrastructure modules may have only ERD.md tracing to another module's PRODUCT.md.
+- <a id="P-ANCHORS-MONO-PARTIAL"></a>**P-ANCHORS-MONO-PARTIAL**: Not every module needs all four documents. Infrastructure modules may have only ENGINEERING.md tracing to another module's PRODUCT.md.
 
 ---
 
@@ -129,7 +129,7 @@ ANCHORS is a requirements-driven development framework consisting of a CLI tool 
 
 - <a id="P-ANCHORS-DETACHED-EXTERNAL"></a>**P-ANCHORS-DETACHED-EXTERNAL**: External detached mode: the anchors documents live in a separate repo from the code. The `repo` field identifies the target codebase (URL or local path), `ref` specifies the branch/tag/SHA, and `path` scopes to a subdirectory within that repo.
 
-- <a id="P-ANCHORS-DETACHED-FORWARD-REFS"></a>**P-ANCHORS-DETACHED-FORWARD-REFS**: In detached mode, ERD.md uses `→` forward references to trace requirements to specific code locations in the target codebase (files and symbols).
+- <a id="P-ANCHORS-DETACHED-FORWARD-REFS"></a>**P-ANCHORS-DETACHED-FORWARD-REFS**: In detached mode, ENGINEERING.md uses `→` forward references to trace requirements to specific code locations in the target codebase (files and symbols).
 
 - <a id="P-ANCHORS-DETACHED-SETUP"></a>**P-ANCHORS-DETACHED-SETUP**: Setup for detached mode researches the target codebase and generates documents with forward references to code locations.
 
@@ -137,7 +137,7 @@ ANCHORS is a requirements-driven development framework consisting of a CLI tool 
 
 - <a id="P-ANCHORS-DETACHED-NO-TOUCH"></a>**P-ANCHORS-DETACHED-NO-TOUCH**: Detached mode never modifies the target codebase — no inline tags, no sidecar files, nothing.
 
-- <a id="P-ANCHORS-DETACHED-EMBED"></a>**P-ANCHORS-DETACHED-EMBED**: A detached module can be converted to embedded mode. The embed action adds inline requirement tags to source files based on the `→` forward references, removes the forward references from ERD.md, and removes the detached-mode fields from ANCHORS.md. This requires the target code to be locally accessible.
+- <a id="P-ANCHORS-DETACHED-EMBED"></a>**P-ANCHORS-DETACHED-EMBED**: A detached module can be converted to embedded mode. The embed action adds inline requirement tags to source files based on the `→` forward references, removes the forward references from ENGINEERING.md, and removes the detached-mode fields from ANCHORS.md. This requires the target code to be locally accessible.
 
 ---
 

@@ -2,7 +2,7 @@
 scope: Automated testing strategy — test pyramid, tooling, and coverage targets.
 see-also:
   - PRODUCT.md — product requirements that define acceptance criteria.
-  - ERD.md — technical requirements and interfaces under test.
+  - ENGINEERING.md — engineering architecture and rules under test.
 ---
 
 # ANCHORS: Testing Strategy
@@ -10,7 +10,7 @@ see-also:
 ## Source of Truth Hierarchy
 
 - **The CLI and SKILL.md are the implementation.** The `anchors` CLI handles deterministic operations (scaffolding, structural linting). The LLM interprets `SKILL.md` at runtime for research, population, and semantic analysis.
-- **PRODUCT.md and ERD.md are truthier than observed behavior.** If the CLI or skill does something that contradicts the documents, the implementation needs fixing.
+- **PRODUCT.md and ENGINEERING.md are truthier than observed behavior.** If the CLI or skill does something that contradicts the documents, the implementation needs fixing.
 - **The check is self-testing.** The check workflow verifies document consistency — running `anchors check` and `/anchors check` on the ANCHORS repo itself is a form of integration test.
 
 ---
@@ -27,7 +27,7 @@ We test what we *can* verify:
 
 1. **Does the CLI work correctly?** We invoke `anchors setup`, `anchors check`, and `anchors upgrade` against temp directories and fixture repos, verifying outputs, exit codes, and file creation.
 
-2. **Are the skill instructions complete?** We grep SKILL.md for every algorithm, rule, and format the ERD requires. If the ERD says "5 disagreement rules," we verify SKILL.md contains all 5.
+2. **Are the skill instructions complete?** We grep SKILL.md for every algorithm, rule, and format ENGINEERING.md requires. If ENGINEERING.md says "5 disagreement rules," we verify SKILL.md contains all 5.
 
 3. **Do the document formats work?** We build fixture repos with known states — complete modules, deliberate gaps, broken cross-refs — and run `anchors check` against them.
 
@@ -93,31 +93,31 @@ ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). 
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Mode table** | The routing table in SKILL.md matches the documented modes in PRODUCT.md |
-| **Report format** | The example check report in SKILL.md includes all gap categories from E-ANCHORS-CHECK-REPORT-FORMAT |
+| **Mode table** | The routing table in SKILL.md matches the documented modes in PRODUCT.md (E-ANCHORS-SMART-ROUTING) |
+| **Report format** | The example check report in SKILL.md includes all gap categories (E-ANCHORS-CHECK-COMPLETENESS) |
 
 ### 1.2 SKILL.md Algorithm Completeness (`test_skill_algorithms.sh`)
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Truth hierarchy** | SKILL.md documents the full hierarchy order (E-ANCHORS-HIERARCHY-ORDER) |
-| **Disagreement rules** | All 5 disagreement resolution rules present (E-ANCHORS-DISAGREE-RULES) |
-| **Code tag format** | Tag format, one-per-function rule, augment-not-replace (E-ANCHORS-CODE-TAG-FORMAT) |
-| **Setup path resolution** | 3-step algorithm: explicit path, clean CWD, occupied CWD (E-ANCHORS-SETUP-PATH-RESOLUTION) |
-| **Setup conflict check** | Skip/overwrite options for existing files (E-ANCHORS-SETUP-CONFLICT-CHECK) |
-| **Setup agent instructions** | AGENTS.md/CLAUDE.md logic with symlink handling (E-ANCHORS-SETUP-AGENT-INSTRUCTIONS) |
-| **Setup defaults** | Directory name as default project name and prefix (E-ANCHORS-SETUP-DEFAULTS) |
-| **Check glob exclusions** | node_modules, vendor, .git excluded from discovery (E-ANCHORS-CHECK-GLOB) |
-| **Route recommendation** | Check recommended when modules exist, setup when none (E-ANCHORS-ROUTE-RECOMMEND) |
+| **Truth hierarchy** | SKILL.md documents the full hierarchy order (E-ANCHORS-DETERMINISTIC-RESOLUTION) |
+| **Disagreement rules** | All 5 disagreement resolution rules present (E-ANCHORS-DETERMINISTIC-RESOLUTION) |
+| **Code tag format** | Tag format, one-per-function rule, augment-not-replace (E-ANCHORS-CANONICAL-IDS) |
+| **Setup path resolution** | 3-step algorithm: explicit path, clean CWD, occupied CWD (E-ANCHORS-SMART-ROUTING) |
+| **Setup conflict check** | Skip/overwrite options for existing files (E-ANCHORS-IDEMPOTENT-OPS) |
+| **Setup agent instructions** | AGENTS.md/CLAUDE.md logic with symlink handling (E-ANCHORS-AGENT-AGNOSTIC) |
+| **Setup defaults** | Directory name as default project name and prefix (E-ANCHORS-RESEARCH-PROTECTION) |
+| **Check glob exclusions** | node_modules, vendor, .git excluded from discovery (E-ANCHORS-CHECK-COMPLETENESS) |
+| **Route recommendation** | Check recommended when modules exist, setup when none (E-ANCHORS-SMART-ROUTING) |
 
 ### 1.3 Document Format Validation (`test_document_format.sh`)
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Document locations** | Documents are siblings of ANCHORS.md in fixture (E-ANCHORS-DOC-LOCATIONS) |
-| **P-ID format** | `<a id="P-..."></a>**P-...**:` pattern in fixtures and templates (E-ANCHORS-P-ID-FORMAT) |
-| **E-ID format** | Same anchor pattern plus ← backlink within 2 lines (E-ANCHORS-E-ID-FORMAT) |
-| **D-DEP format** | Section header `### D-DEP-*` with Used by/Where/Why fields (E-ANCHORS-DEP-ID-FORMAT) |
+| **Document locations** | Documents are siblings of ANCHORS.md in fixture (E-ANCHORS-DOC-INTEGRITY) |
+| **P-ID format** | `<a id="P-..."></a>**P-...**:` pattern in fixtures and templates (E-ANCHORS-CANONICAL-IDS) |
+| **E-ID format** | Same anchor pattern plus ← backlink within 2 lines (E-ANCHORS-CANONICAL-IDS) |
+| **D-DEP format** | Section header `### D-DEP-*` with Used by/Where/Why fields (E-ANCHORS-CANONICAL-IDS) |
 
 ---
 
@@ -130,17 +130,17 @@ ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). 
 | Test Area | What to Test |
 |-----------|-------------|
 | **Script syntax** | `anchors` passes `bash -n` syntax check |
-| **Setup creates files** | `anchors setup` creates all 5 skeleton files |
+| **Setup creates files** | `anchors setup` creates all 5 skeleton files (E-ANCHORS-CLI-SKILL-BOUNDARY) |
 | **Prefix in frontmatter** | Created ANCHORS.md contains the --prefix value |
 | **Detached mode frontmatter** | `--mode detached` produces correct frontmatter fields |
-| **Skip existing** | `--skip-existing` preserves existing files |
-| **Prefix collision** | Duplicate prefix rejected with error |
-| **Agent detection** | Correct skill target dirs for claude, amp, codex, airules |
-| **Agent instructions** | ANCHORS section appended to AGENTS.md/CLAUDE.md with symlink handling |
-| **ai-rules checks** | ai-rules prerequisites validated (command, directory) |
-| **Check subcommand** | `anchors check` outputs structured report |
+| **Skip existing** | `--skip-existing` preserves existing files (E-ANCHORS-IDEMPOTENT-OPS) |
+| **Prefix collision** | Duplicate prefix rejected with error (E-ANCHORS-IDEMPOTENT-OPS) |
+| **Agent detection** | Correct skill target dirs for claude, amp, codex, airules (E-ANCHORS-AGENT-AGNOSTIC) |
+| **Agent instructions** | ANCHORS section appended to AGENTS.md/CLAUDE.md with symlink handling (E-ANCHORS-AGENT-AGNOSTIC) |
+| **ai-rules checks** | ai-rules prerequisites validated (command, directory) (E-ANCHORS-AGENT-AGNOSTIC) |
+| **Check subcommand** | `anchors check` outputs structured report (E-ANCHORS-CLI-SKILL-BOUNDARY) |
 | **Check exit codes** | Clean module → 0, errors → 1 |
-| **Upgrade subcommand** | `anchors upgrade` replaces skill files |
+| **Upgrade subcommand** | `anchors upgrade` replaces skill files (E-ANCHORS-CLI-SKILL-BOUNDARY) |
 | **Upgrade version comparison** | `anchors upgrade` prints installed and incoming versions, blocks downgrade, allows `--force` override |
 | **Usage** | No args or unknown command prints usage |
 
@@ -150,9 +150,9 @@ ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). 
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Skip existing** | Only missing files created, existing files untouched |
+| **Skip existing** | Only missing files created, existing files untouched (E-ANCHORS-IDEMPOTENT-OPS) |
 | **Overwrite all** | All files replaced with fresh skeletons |
-| **Prefix collision** | Duplicate prefix across modules is rejected |
+| **Prefix collision** | Duplicate prefix across modules is rejected (E-ANCHORS-IDEMPOTENT-OPS) |
 
 ### 2.3 Check on Well-Formed Repo (`test_fixture_complete.sh`)
 
@@ -160,10 +160,10 @@ ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). 
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Module discovery** | All modules found, prefixes extracted |
-| **Backlink coverage** | 100% E-* → P-* backlinks detected |
-| **PRD coverage** | All P-* covered by E-* detected |
-| **Code traceability** | Requirement refs in code and tests correctly classified |
+| **Module discovery** | All modules found, prefixes extracted (E-ANCHORS-CHECK-COMPLETENESS) |
+| **Backlink coverage** | 100% E-* → P-* backlinks detected (E-ANCHORS-CHECK-COMPLETENESS) |
+| **PRD coverage** | All P-* covered by E-* detected (E-ANCHORS-CHECK-COMPLETENESS) |
+| **Code traceability** | Requirement refs in code and tests correctly classified (E-ANCHORS-CHECK-COMPLETENESS) |
 | **Report completeness** | Report includes all sections with correct counts |
 
 ### 2.4 Check on Repo with Gaps (`test_fixture_gaps.sh`)
@@ -172,10 +172,10 @@ ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). 
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Missing backlinks** | E-* without ← reported |
-| **Uncovered PRD** | P-* with no E-* coverage reported |
-| **Open questions** | OPEN-* items listed |
-| **Missing documents** | Absent TESTING.md and DEPENDENCIES.md detected |
+| **Missing backlinks** | E-* without ← reported (E-ANCHORS-CHECK-COMPLETENESS) |
+| **Uncovered PRD** | P-* with no E-* coverage reported (E-ANCHORS-CHECK-COMPLETENESS) |
+| **Open questions** | OPEN-* items listed (E-ANCHORS-CHECK-COMPLETENESS) |
+| **Missing documents** | Absent TESTING.md and DEPENDENCIES.md detected (E-ANCHORS-CHECK-COMPLETENESS) |
 
 ### 2.5 Cross-Module References (`test_fixture_multi_module.sh`)
 
@@ -183,11 +183,11 @@ ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). 
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Valid cross-ref** | Relative path resolves, anchor exists — no error (E-ANCHORS-CHECK-CROSS-RESOLVE) |
+| **Valid cross-ref** | Relative path resolves, anchor exists — no error (E-ANCHORS-CHECK-COMPLETENESS) |
 | **Broken path** | Relative path to nonexistent file — reported |
 | **Broken anchor** | File exists but anchor ID missing — reported |
-| **Relative path format** | Cross-module refs use `← [P-*](../module/PRODUCT.md#P-*)` (E-ANCHORS-MONO-RELATIVE-PATHS) |
-| **Partial modules** | Modules without all 4 documents are valid (E-ANCHORS-MONO-PARTIAL-MODULES) |
+| **Relative path format** | Cross-module refs use `← [P-*](../module/PRODUCT.md#P-*)` (E-ANCHORS-MODULE-INDEPENDENCE) |
+| **Partial modules** | Modules without all 4 documents are valid (E-ANCHORS-MODULE-INDEPENDENCE) |
 
 ### 2.6 Prefix Collision (`test_fixture_prefix_collision.sh`)
 
@@ -195,7 +195,7 @@ ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). 
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Collision detected** | Duplicate prefixes flagged |
+| **Collision detected** | Duplicate prefixes flagged (E-ANCHORS-CHECK-COMPLETENESS) |
 | **Valid fixture clean** | Multi-module fixture has no collisions |
 
 ### 2.7 Code Traceability (`test_code_traceability.sh`)
@@ -204,10 +204,10 @@ ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). 
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Code search** | Requirement IDs found in source files (E-ANCHORS-CHECK-CODE-SEARCH) |
+| **Code search** | Requirement IDs found in source files (E-ANCHORS-CHECK-COMPLETENESS) |
 | **File classification** | Source vs test files distinguished by path convention |
-| **Stale refs** | Code refs to IDs not in any document detected (E-ANCHORS-CHECK-STALE-REFS) |
-| **Test gaps** | Requirements in source but not test files detected (E-ANCHORS-CHECK-TEST-GAP) |
+| **Stale refs** | Code refs to IDs not in any document detected (E-ANCHORS-CHECK-COMPLETENESS) |
+| **Test gaps** | Requirements in source but not test files detected (E-ANCHORS-CHECK-COMPLETENESS) |
 
 ### 2.8 Self-Check (`test_self_audit.sh`)
 
@@ -215,29 +215,29 @@ ANCHORS has both a CLI (testable deterministically) and a skill (requires LLM). 
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Marker format** | ANCHORS.md has prefix field |
-| **Document presence** | PRODUCT.md, ERD.md, TESTING.md exist |
-| **ID extraction** | All P-* and E-* IDs found with HTML anchors |
-| **Backlinks** | Every E-* has ← backlink to P-* |
-| **PRD coverage** | Every P-* referenced by at least one E-* |
-| **Open questions** | No unresolved OPEN-* items |
-| **Frontmatter** | All documents have scope and see-also fields |
+| **Marker format** | ANCHORS.md has prefix field (E-ANCHORS-DOC-INTEGRITY) |
+| **Document presence** | PRODUCT.md, ENGINEERING.md, TESTING.md exist (E-ANCHORS-DOC-INTEGRITY) |
+| **ID extraction** | All P-* and E-* IDs found with HTML anchors (E-ANCHORS-CHECK-COMPLETENESS) |
+| **Backlinks** | Every E-* has ← backlink to P-* (E-ANCHORS-CHECK-COMPLETENESS) |
+| **PRD coverage** | Every P-* referenced by at least one E-* (E-ANCHORS-CHECK-COMPLETENESS) |
+| **Open questions** | No unresolved OPEN-* items (E-ANCHORS-CHECK-COMPLETENESS) |
+| **Frontmatter** | All documents have scope and see-also fields (E-ANCHORS-DOC-INTEGRITY) |
 
 ### 2.9 Detached Mode (`test_detached_mode.sh`)
 
-**Setup:** `testdata/fixtures/detached-module/` — a module with `repo` field in ANCHORS.md frontmatter, ERD.md containing `→` forward references, and a cloned target snapshot under `testdata/fixtures/detached-target/` simulating the target repo.
+**Setup:** `testdata/fixtures/detached-module/` — a module with `repo` field in ANCHORS.md frontmatter, ENGINEERING.md containing `→` forward references, and a cloned target snapshot under `testdata/fixtures/detached-target/` simulating the target repo.
 
 | Test Area | What to Test |
 |-----------|-------------|
-| **Mode detection** | ANCHORS.md with `repo` field detected as detached mode; without `repo` detected as embedded (E-ANCHORS-DETACHED-MODE-DETECTION) |
-| **Frontmatter schema** | External: `repo`, `ref`, `path` fields parsed (E-ANCHORS-DETACHED-EXTERNAL-FRONTMATTER); In-repo: `path` only, no `repo`/`ref` (E-ANCHORS-DETACHED-IN-REPO-FRONTMATTER) |
-| **Forward ref format** | `→` references use backtick-wrapped `file:symbol` format, comma-separated (E-ANCHORS-DETACHED-FORWARD-REF-FORMAT) |
-| **Forward ref validation** | Valid refs resolve against target fixture; broken refs (missing file, missing symbol) reported (E-ANCHORS-DETACHED-FORWARD-REF-VALIDATION) |
-| **No inline tag search** | Check in detached mode does not search target code for `P-*`/`E-*` inline tags (E-ANCHORS-DETACHED-NO-INLINE-TAGS) |
+| **Mode detection** | ANCHORS.md with `repo` field detected as detached mode; without `repo` detected as embedded (E-ANCHORS-DETACHED-ISOLATION) |
+| **Frontmatter schema** | External: `repo`, `ref`, `path` fields parsed; In-repo: `path` only, no `repo`/`ref` (E-ANCHORS-DETACHED-ISOLATION) |
+| **Forward ref format** | `→` references use backtick-wrapped `file:symbol` format, comma-separated (E-ANCHORS-DETACHED-ISOLATION) |
+| **Forward ref validation** | Valid refs resolve against target fixture; broken refs (missing file, missing symbol) reported (E-ANCHORS-DETACHED-LIFECYCLE) |
+| **No inline tag search** | Check in detached mode does not search target code for `P-*`/`E-*` inline tags (E-ANCHORS-DETACHED-ISOLATION) |
 | **Doc consistency** | Backlinks, PRD coverage, and other doc-internal checks work the same in detached mode |
-| **Embed prereq** | Embed action rejected on embedded modules (no `repo` field) (E-ANCHORS-EMBED-PREREQ) |
-| **Embed strips forward refs** | After embed, ERD.md has no `→` lines; `←` backlinks preserved (E-ANCHORS-EMBED-STRIP-FORWARD-REFS) |
-| **Embed strips frontmatter** | After embed, ANCHORS.md has only `prefix`, no `repo`/`ref`/`path` (E-ANCHORS-EMBED-STRIP-FRONTMATTER) |
+| **Embed prereq** | Embed action rejected on embedded modules (no `repo` field) (E-ANCHORS-DETACHED-LIFECYCLE) |
+| **Embed strips forward refs** | After embed, ENGINEERING.md has no `→` lines; `←` backlinks preserved (E-ANCHORS-DETACHED-LIFECYCLE) |
+| **Embed strips frontmatter** | After embed, ANCHORS.md has only `prefix`, no `repo`/`ref`/`path` (E-ANCHORS-DETACHED-LIFECYCLE) |
 
 ---
 
@@ -310,7 +310,7 @@ Running `anchors check` on this repository is the primary structural smoke test.
 
 | Layer | Target | Rationale |
 |-------|--------|-----------|
-| Unit/Static | 100% of ERD algorithm requirements | SKILL.md must contain every required algorithm |
+| Unit/Static | 100% of Engineering requirements | SKILL.md must contain every required algorithm |
 | Integration | 100% of check gap categories, 100% of CLI subcommands | Every gap type must have a fixture; every CLI path must be exercised |
 | E2E | All 3 modes exercised | Interactive, setup, and check must each be run at least once (manual) |
 

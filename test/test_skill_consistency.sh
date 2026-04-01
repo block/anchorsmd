@@ -7,7 +7,7 @@ set -euo pipefail
 source "$(dirname "$0")/helpers.sh"
 
 echo "  [1.2.1] Routing table matches documented modes"
-# E-ANCHORS-ROUTE-PARSE: SKILL.md must document all routing entries
+# E-ANCHORS-SMART-ROUTING: SKILL.md must document all routing entries
 assert_grep "SKILL.md documents interactive mode" 'no args.*Interactive|Interactive.*no args' "$SKILL_FILE"
 assert_grep "SKILL.md documents setup mode" '/anchors setup' "$SKILL_FILE"
 assert_grep "SKILL.md documents setup with path" 'setup.*path|setup <path>' "$SKILL_FILE"
@@ -16,11 +16,11 @@ assert_grep "SKILL.md documents embed mode" '/anchors embed' "$SKILL_FILE"
 assert_grep "SKILL.md documents embed with path" 'embed.*path' "$SKILL_FILE"
 
 echo "  [1.2.2] Check report format includes all gap categories"
-# E-ANCHORS-CHECK-REPORT-FORMAT: the example report must include every gap category
+# E-ANCHORS-CHECK-COMPLETENESS: the example report must include every gap category
 assert_grep "Report has Modules section" '### Modules' "$SKILL_FILE"
 assert_grep "Report has Traceability section" '### Traceability' "$SKILL_FILE"
 assert_grep "Report has Gaps section" '### Gaps' "$SKILL_FILE"
-assert_grep "Report has Missing ERD Backlinks" 'Missing ERD Backlinks' "$SKILL_FILE"
+assert_grep "Report has Missing Engineering Backlinks" 'Missing Engineering Backlinks' "$SKILL_FILE"
 assert_grep "Report has Uncovered Product Requirements" 'Uncovered Product Requirements' "$SKILL_FILE"
 assert_grep "Report has Untraced Requirements" 'Untraced Requirements' "$SKILL_FILE"
 assert_grep "Report has Requirements Without Test References" 'Without Test References' "$SKILL_FILE"

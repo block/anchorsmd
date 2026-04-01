@@ -26,7 +26,7 @@ A module's ANCHORS document set consists of up to four documents plus a marker f
 |----------|---------|-----------------|
 | **ANCHORS.md** | Module marker. YAML frontmatter with `prefix` field. | — |
 | **PRODUCT.md** | Product requirements — observable behavior, outcomes, and qualities. No implementation approach. Litmus test: could you verify this requirement without reading source code? Source of truth. | `P-*` |
-| **ERD.md** | Engineering requirements — how the system achieves the product requirements. Technical decisions, mechanisms, interfaces. Derived from PRODUCT.md. | `E-*` |
+| **ENGINEERING.md** | Engineering architecture — rules, principles, and constraints that govern how the system is built. Organized by cross-cutting concern. Must not contradict PRODUCT.md. | `E-*` |
 | **TESTING.md** | Testing strategy — pyramid, coverage invariants, tooling. Defines how requirements are verified. | — |
 | **DEPENDENCIES.md** | External dependencies — what the environment must provide because the system cannot supply it. | `D-DEP-*` |
 
@@ -37,7 +37,7 @@ All four documents are part of the framework. TESTING.md and DEPENDENCIES.md par
 ANCHORS operates in one of two modes:
 
 - **Embedded** (default): Docs live alongside the code they describe. Requirement IDs are tagged inline in source code and tests. Check searches the local codebase for traceability. This is the standard mode.
-- **Detached**: Docs live separately from the code they describe. The target codebase is never modified. Traceability uses `→` forward references in ERD.md pointing to code locations in the target codebase. Detached mode works whether the docs are in the same repo (in-repo detached) or in a completely separate repo (external detached).
+- **Detached**: Docs live separately from the code they describe. The target codebase is never modified. Traceability uses `→` forward references in ENGINEERING.md pointing to code locations in the target codebase. Detached mode works whether the docs are in the same repo (in-repo detached) or in a completely separate repo (external detached).
 
 Mode is set explicitly: if `ANCHORS.md` frontmatter contains `mode: detached`, the module is detached. Otherwise it's embedded.
 
@@ -68,7 +68,7 @@ path: src/auth
 ---
 ```
 
-- `mode` — `detached` or omitted. When `detached`, the target code is never modified and ERD.md uses `→` forward references instead of inline code tags.
+- `mode` — `detached` or omitted. When `detached`, the target code is never modified and ENGINEERING.md uses `→` forward references instead of inline code tags.
 - `repo` — target codebase (GitHub URL or local path). Only used in detached mode when the code is in a different repo. Omit for in-repo detached.
 - `ref` — branch, tag, or SHA to track (defaults to `main`). Only meaningful with `repo`.
 - `path` — subdirectory to scope research and traceability. **In-repo detached** (no `repo`): relative to the ANCHORS.md file, like embedded mode. **External detached** (with `repo`): relative to the target repo root. Defaults to `.` (in-repo) or `/` (external).
@@ -76,13 +76,12 @@ path: src/auth
 ### Truth Hierarchy
 
 ```
-PRODUCT.md (source of truth — defines correct behavior)
-    ↓ derives
-ERD.md (technical requirements — must fully satisfy the PRD)
+PRODUCT.md (what to build — authoritative on behavior)
+ENGINEERING.md (how to build it — authoritative on architecture, must not contradict PRD)
     ↓ constrains
 DEPENDENCIES.md (external prerequisites — what the environment must provide)
 
-TESTING.md (testing strategy — covers both PRODUCT.md and ERD.md)
+TESTING.md (testing strategy — covers both PRODUCT.md and ENGINEERING.md)
     ↓ executed as
 Tests (executable specification — truthier than implementation)
     ↓ validated against
@@ -92,36 +91,39 @@ Implementation (must satisfy all of the above)
 ### Disagreement Rules
 
 - Implementation vs tests → implementation is probably wrong
-- Tests vs PRD/ERD → tests are wrong (fix the tests, or update the documents first if the requirement changed)
-- TESTING.md vs PRD/ERD → TESTING.md is wrong (update the testing strategy to match the requirements)
-- ERD vs PRD → ERD is wrong (PRD is authoritative)
-- DEPENDENCIES.md vs ERD → check which is correct (ERD may include requirements for the system to manage something that DEPENDENCIES.md lists as external — resolve which is current)
+- Tests vs PRD/Engineering → tests are wrong (fix the tests, or update the documents first if the requirement changed)
+- TESTING.md vs PRD/Engineering → TESTING.md is wrong (update the testing strategy to match the requirements)
+- ENGINEERING.md vs PRD → ENGINEERING.md is wrong (PRD is authoritative)
+- DEPENDENCIES.md vs ENGINEERING.md → check which is correct (ENGINEERING.md may include requirements for the system to manage something that DEPENDENCIES.md lists as external — resolve which is current)
 
 ### Rules
 
 1. **PRODUCT.md is authoritative.** If there is a conflict between documents, PRODUCT.md wins.
-2. **ERD.md must fully satisfy PRODUCT.md.** Every product requirement should have corresponding engineering requirements that cover it.
-3. **All implementation must meet both PRD and ERD requirements.** Do not implement against only one document.
-4. **Keep documents consistent.** When changing a requirement, update PRODUCT.md first, then ERD.md to reflect it (and link back).
-5. **Do not add requirements to ERD.md that contradict or extend PRODUCT.md without updating PRODUCT.md first.** The PRD drives the ERD, not the other way around.
-6. **Tests are truthier than implementation, but documents are truthier than tests.** If the implementation diverges from the tests, the implementation is assumed buggy. If the tests diverge from the PRD or ERD, the tests are wrong. Fix the code to match the tests; fix the tests to match the documents; update the documents first if the requirement has genuinely changed.
+2. **ENGINEERING.md must fully satisfy PRODUCT.md.** Every product requirement should have corresponding engineering requirements that cover it.
+3. **All implementation must meet both PRD and Engineering requirements.** Do not implement against only one document.
+4. **Keep documents consistent.** When changing a requirement, update PRODUCT.md first, then ENGINEERING.md to reflect it (and link back).
+5. **Do not add requirements to ENGINEERING.md that contradict or extend PRODUCT.md without updating PRODUCT.md first.** The PRD drives ENGINEERING.md, not the other way around.
+6. **Tests are truthier than implementation, but documents are truthier than tests.** If the implementation diverges from the tests, the implementation is assumed buggy. If the tests diverge from the PRD or ENGINEERING.md, the tests are wrong. Fix the code to match the tests; fix the tests to match the documents; update the documents first if the requirement has genuinely changed.
 7. **Every P-\* and E-\* requirement must have test coverage.** See TESTING.md for coverage invariants. A requirement without a corresponding test is a coverage gap that must be addressed.
 
 ### Content Guidelines
 
-The litmus test: a product manager should read PRODUCT.md without needing to Google anything, and a staff engineer should read ERD.md and find real technical detail — not just a rephrasing of the product requirements.
+The litmus test: a product manager should read PRODUCT.md without needing to Google anything, and a staff engineer should read ENGINEERING.md and find architectural rules that constrain real decisions — not a rephrasing of the product requirements or a step-by-step implementation spec.
 
 **PRODUCT.md — describe what users see and do:**
 
 - Name the experience, not the mechanism. "Updates in real-time" not "updates via SSE." "Interactive diagrams" not "interactive SVGs."
-- Every requirement needs a visible verb — what a human sees or does. "The UI shows X", "Users can Y", "A modal appears with Z." If you can't describe an observable behavior, it belongs in ERD or is underspecified.
+- Every requirement needs a visible verb — what a human sees or does. "The UI shows X", "Users can Y", "A modal appears with Z." If you can't describe an observable behavior, it belongs in ENGINEERING.md or is underspecified.
 - Specify concrete details when they ARE the product requirement. "Cmd+T opens a new tab, Cmd+W closes the current tab" — not "keyboard shortcuts for tab management."
 - Don't reference undefined terms. If a concept isn't self-evident from the user's perspective, define it or point to where it's defined.
 
-**ERD.md — describe how the system achieves product requirements:**
+**ENGINEERING.md — define architectural rules and principles:**
 
-- Protocol names, file formats, data structures, algorithms, and implementation mechanisms all belong here. This is where technical specificity lives.
-- Add HOW, don't restate WHAT. If an ERD entry reads like a rephrasing of the P-* it links to, it's not adding value.
+- Each entry states a cross-cutting rule, explains WHY it exists, and links to all product requirements it governs.
+- Organize by architectural concern (data integrity, trust boundaries, performance invariants, extensibility), not by feature area.
+- Rules should be durable — they survive refactors. Implementation details that change with each sprint belong in code comments, not here.
+- A good engineering rule constrains many decisions. A bad one describes one function.
+- Add WHY, don't restate WHAT. If an entry reads like a rephrasing of the P-* it links to, it's not adding value.
 
 ### Document Structure
 
@@ -140,8 +142,8 @@ This is the self-cleaning mechanism: when the skill spec changes (e.g., a sectio
 
 Check validates content patterns (proper P-\* IDs, anchor format) rather than specific section names, since sections are project-specific.
 
-**ERD.md** — flexible structure:
-- `## {N}. {Technical Concern}` — numbered sections containing E-\* requirements with `←` backlinks
+**ENGINEERING.md** — flexible structure:
+- `## {Architectural Concern}` — sections organized by cross-cutting concern, containing E-\* requirements with `←` backlinks
 - `## Open Questions` / `## Resolved Questions` *(optional)*
 
 Check validates content patterns (proper E-\* IDs, backlinks) rather than specific section names.
@@ -169,7 +171,7 @@ Any H2 section not in this list is structural drift and should be flagged by che
 - <a id="P-AUTH-LOGIN"></a>**P-AUTH-LOGIN**: Users can log in with email and password.
 ```
 
-**ERD.md** — `E-` prefix with backlink to the product requirement it satisfies:
+**ENGINEERING.md** — `E-` prefix with backlink to the product requirements it governs:
 ```markdown
 - <a id="E-AUTH-SESSION"></a>**E-AUTH-SESSION**: Sessions use signed JWTs with 24-hour expiry.
   ← [P-AUTH-LOGIN](PRODUCT.md#P-AUTH-LOGIN)
@@ -177,7 +179,7 @@ Any H2 section not in this list is structural drift and should be flagged by che
 
 Every `E-*` requirement must have a `←` backlink. This is how the check tracks coverage.
 
-**ERD.md (detached mode)** — `E-` prefix with backlink and `→` forward references to code locations in the target repo:
+**ENGINEERING.md (detached mode)** — `E-` prefix with backlink and `→` forward references to code locations in the target repo:
 ```markdown
 - <a id="E-AUTH-SESSION"></a>**E-AUTH-SESSION**: Sessions use signed JWTs with 24-hour expiry.
   ← [P-AUTH-LOGIN](PRODUCT.md#P-AUTH-LOGIN)
@@ -238,13 +240,13 @@ prefix: PAY-CHECKOUT
 ---
 ```
 
-Prefixes must be unique across the repo. Within a module, PRODUCT.md/ERD.md links are relative. Cross-module references use relative paths:
+Prefixes must be unique across the repo. Within a module, PRODUCT.md/ENGINEERING.md links are relative (backlinks in ENGINEERING.md point to PRODUCT.md). Cross-module references use relative paths:
 
 ```markdown
 ← [P-PAY-CHECKOUT-CART](../checkout/PRODUCT.md#P-PAY-CHECKOUT-CART)
 ```
 
-Not every module needs all four documents. Pure infrastructure modules might only have ERD.md tracing to another module's PRODUCT.md. TESTING.md can be per-module or shared.
+Not every module needs all four documents. Pure infrastructure modules might have only ENGINEERING.md tracing to another module's PRODUCT.md. TESTING.md can be per-module or shared.
 
 ---
 
@@ -296,7 +298,7 @@ Setup uses the `anchors` CLI for deterministic steps (skill installation, scaffo
 
 ### Steps
 
-1. Check if any ANCHORS documents already exist in the target directory (`ANCHORS.md`, `PRODUCT.md`, `ERD.md`, `TESTING.md`, `DEPENDENCIES.md`). If any exist, use `AskUserQuestion` to confirm:
+1. Check if any ANCHORS documents already exist in the target directory (`ANCHORS.md`, `PRODUCT.md`, `ENGINEERING.md`, `TESTING.md`, `DEPENDENCIES.md`; also check for legacy `ERD.md`). If any exist, use `AskUserQuestion` to confirm:
    - Question: "These ANCHORS documents already exist: [list]. Overwrite them?"
    - Header: "Overwrite"
    - Options: **Skip existing** ("Only create missing documents"), **Overwrite all** ("Replace all documents with fresh content")
@@ -359,13 +361,13 @@ Setup uses the `anchors` CLI for deterministic steps (skill installation, scaffo
 
    Each subagent should read broadly — not just top-level files, but trace into implementations, configs, tests, and build files. The findings should be exhaustive in coverage but compact in format: structured lists and descriptions, not code snippets.
 
-   **Tests deserve special attention.** In the ANCHORS truth hierarchy, tests are truthier than implementation. Tests encode real behaviors, edge cases, invariants, and contract boundaries that may not be obvious from implementation alone. The functional areas and technical architecture agents should weight test files heavily — a tested behavior is a stronger signal of a real requirement than an implementation detail that might be incidental. The testing agent's findings directly feed TESTING.md, but they also inform PRODUCT.md (what behaviors matter enough to test) and ERD.md (what technical contracts are explicitly verified).
+   **Tests deserve special attention.** In the ANCHORS truth hierarchy, tests are truthier than implementation. Tests encode real behaviors, edge cases, invariants, and contract boundaries that may not be obvious from implementation alone. The functional areas and technical architecture agents should weight test files heavily — a tested behavior is a stronger signal of a real requirement than an implementation detail that might be incidental. The testing agent's findings directly feed TESTING.md, but they also inform PRODUCT.md (what behaviors matter enough to test) and ENGINEERING.md (what architectural rules are explicitly verified).
 
    **Detached mode — target codebase specified in ANCHORS.md:**
 
    Resolve the target codebase. **In-repo** (no `repo` field): resolve `path` relative to the ANCHORS.md file to find the local code directory. **External** (with `repo`): access the codebase at `{repo}` (at the `{ref}` revision), scoped to the `path` subdirectory.
 
-   Launch the same four subagents as embedded mode, but point them at the resolved target directory. The subagents research the target codebase exactly as they would for embedded mode. Additionally, the technical architecture agent should note specific file paths and symbol names — these will become `→` forward references in ERD.md.
+   Launch the same four subagents as embedded mode, but point them at the resolved target directory. The subagents research the target codebase exactly as they would for embedded mode. Additionally, the technical architecture agent should note specific file paths and symbol names — these will become `→` forward references in ENGINEERING.md.
 
    **Greenfield — no code, no target repo:**
 
@@ -375,7 +377,7 @@ Setup uses the `anchors` CLI for deterministic steps (skill installation, scaffo
 
    - **ANCHORS.md**: Already created by CLI with correct frontmatter. No changes needed.
    - **PRODUCT.md**: Real P-* requirements organized by functional area. Every requirement should describe user-facing behavior, not implementation details. Use the prefix from ANCHORS.md to scope IDs (e.g., prefix `AUTH` → `P-AUTH-LOGIN`).
-   - **ERD.md**: Real E-* requirements organized by technical concern, each with a `←` backlink to the P-* requirement it satisfies. Every P-* requirement must have at least one corresponding E-* requirement. **In detached mode**, each E-* requirement should also include `→` forward references to specific file:symbol locations in the target codebase discovered during research.
+   - **ENGINEERING.md**: Real E-* requirements organized by cross-cutting architectural concern, each with `←` backlinks to the P-* requirements it governs. Every P-* requirement must be covered by at least one E-* requirement. Each entry should state a rule or principle, explain why it exists, and link to multiple P-* requirements where applicable. **In detached mode**, each E-* requirement should also include `→` forward references to specific file:symbol locations in the target codebase discovered during research.
    - **TESTING.md**: Real testing strategy following the prescribed Document Structure — actual test layers, actual tooling, actual coverage invariants, actual exclusions. Generate exactly the sections listed in the canonical structure. Not boilerplate.
    - **DEPENDENCIES.md**: Real external dependencies with D-DEP-* IDs — or delete the file entirely if there are no true external dependencies.
 
@@ -397,7 +399,7 @@ Run `anchors check` to perform all deterministic validation. The CLI outputs a s
 - Module discovery and prefix collision detection
 - Document presence
 - Frontmatter validation
-- ERD backlink verification
+- Engineering backlink verification
 - PRD coverage analysis
 - Forward reference validation (detached modules)
 - Open question scanning
@@ -410,9 +412,9 @@ After the structural check, the skill performs deeper analysis that requires und
 
 1. **For detached modules, resolve the target codebase.** For each detached module: **In-repo** (no `repo` field): resolve `path` relative to the ANCHORS.md file. **External** (with `repo`): access the codebase at `repo` and `ref`, scoped to `path` (defaulting to `/`). Cache or reuse the resolved target for subsequent steps.
 
-2. **Check document structure.** Validate each document against the canonical structure defined in the Document Structure section. For TESTING.md, verify all required H2 sections are present and flag any H2 sections not in the canonical list as structural drift. For PRODUCT.md and ERD.md, verify sections contain properly formatted requirements (P-\*/E-\* IDs, backlinks). Report structural drift in the gaps section.
+2. **Check document structure.** Validate each document against the canonical structure defined in the Document Structure section. For TESTING.md, verify all required H2 sections are present and flag any H2 sections not in the canonical list as structural drift. For PRODUCT.md and ENGINEERING.md, verify sections contain properly formatted requirements (P-\*/E-\* IDs, backlinks). Report structural drift in the gaps section.
 
-3. **Check DEPENDENCIES.md boundary.** Verify that nothing listed as an external dependency in DEPENDENCIES.md is contradicted by ERD.md requirements showing the system manages it internally (a stale dependency that was since internalized).
+3. **Check DEPENDENCIES.md boundary.** Verify that nothing listed as an external dependency in DEPENDENCIES.md is contradicted by ENGINEERING.md requirements showing the system manages it internally (a stale dependency that was since internalized).
 
 4. **Check code traceability (embedded modules only).** For embedded modules, search the codebase (excluding `node_modules`, `vendor`, `.git`, build output) for references to `P-*`, `E-*`, and `D-DEP-*` requirement IDs. Report:
    - Requirements referenced in code (good)
@@ -435,20 +437,20 @@ Combine the CLI structural report with the semantic analysis into a single summa
 ### Modules
 - services/auth (prefix: AUTH) — 4/4 documents
 - services/payments (prefix: PAY) — 3/4 documents (no DEPENDENCIES.md)
-- platform/shared (prefix: SHLIB) — 1/4 documents (ERD.md only)
+- platform/shared (prefix: SHLIB) — 1/4 documents (only ENGINEERING.md)
 - apps/penpal/anchors (prefix: PENPAL, detached → ../penpal) — 3/4 documents
 - docs/ext-api (prefix: EXTAPI, detached → github.com/org/api@main) — 3/4 documents
 
 ### Traceability (all modules)
-- ERD → PRD backlinks: 41/43 (2 missing)
-- PRD coverage by ERD: 28/28 (100%)
+- Engineering → PRD backlinks: 41/43 (2 missing)
+- PRD coverage by Engineering: 28/28 (100%)
 - Requirements in code (embedded): 52/71 (73%)
 - Requirements in tests (embedded): 38/71 (54%)
 - Forward references (detached): 12/14 (2 broken)
 
 ### Gaps
 
-#### Missing ERD Backlinks
+#### Missing Engineering Backlinks
 - AUTH: E-AUTH-CACHE-TTL (no ← P-* link)
 - PAY: E-PAY-LOG-FORMAT (no ← P-* link)
 
@@ -496,7 +498,7 @@ Convert a detached module to embedded mode. This adds inline requirement tags to
 
 ### Steps
 
-1. **Read the module.** Read `ANCHORS.md` frontmatter to get `mode`, `repo`, `ref`, `path`. Read `ERD.md` and extract all `→` forward references (list of `file:symbol` pairs per E-* requirement).
+1. **Read the module.** Read `ANCHORS.md` frontmatter to get `mode`, `repo`, `ref`, `path`. Read `ENGINEERING.md` and extract all `→` forward references (list of `file:symbol` pairs per E-* requirement).
 
 2. **Locate the code locally.** The target code must be accessible on the local filesystem. Resolution:
    - **In-repo** (no `repo`): resolve `path` relative to the ANCHORS.md file. The code is already local.
@@ -507,14 +509,14 @@ Convert a detached module to embedded mode. This adds inline requirement tags to
      - Suggest the parent directory and common sibling paths.
    - Verify the resolved path exists and contains the expected files (spot-check a few `→` refs).
 
-3. **Add inline tags.** For each `→` reference in ERD.md:
+3. **Add inline tags.** For each `→` reference in ENGINEERING.md:
    - Resolve the `file:symbol` against the resolved target directory.
    - Find the function/symbol definition in the file.
    - Add an inline requirement tag comment above or on the function (e.g., `// E-AUTH-SESSION: sessions use signed JWTs`).
    - Follow the standard code traceability rules: one tag per function, augment existing comments, don't replace them.
    - If a `→` ref can't be resolved (file missing, symbol not found), skip it and report it at the end.
 
-4. **Update ERD.md.** Remove all `→` lines. The `←` backlinks are preserved unchanged.
+4. **Update ENGINEERING.md.** Remove all `→` lines. The `←` backlinks are preserved unchanged.
 
 5. **Update ANCHORS.md.** Remove the `mode`, `repo`, `ref`, and `path` fields from the frontmatter, leaving only `prefix`. This switches the module to embedded mode.
 

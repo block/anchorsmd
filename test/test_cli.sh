@@ -1,12 +1,7 @@
 #!/bin/bash
 # Test: anchors CLI structure and subcommands
-# Covers: E-ANCHORS-CLI-SUBCOMMANDS, E-ANCHORS-CLI-INSTALL,
-#         E-ANCHORS-CLI-SETUP-FLOW, E-ANCHORS-CLI-AGENT-DETECT,
-#         E-ANCHORS-CLI-SKILL-TARGET-DIRS, E-ANCHORS-CLI-SKILL-REPLACE,
-#         E-ANCHORS-CLI-SCAFFOLD, E-ANCHORS-CLI-INSTRUCTIONS-DIRECT,
-#         E-ANCHORS-CLI-INSTRUCTIONS-AIRULES, E-ANCHORS-CLI-AIRULES-CHECKS,
-#         E-ANCHORS-CLI-CHECK-STRUCTURAL, E-ANCHORS-CLI-UPGRADE,
-#         E-ANCHORS-SETUP-PREFIX-UNIQUE
+# Covers: E-ANCHORS-CLI-SKILL-BOUNDARY, E-ANCHORS-AGENT-AGNOSTIC,
+#         E-ANCHORS-IDEMPOTENT-OPS
 set -euo pipefail
 source "$(dirname "$0")/helpers.sh"
 
@@ -15,58 +10,58 @@ CLI="$REPO_ROOT/anchors"
 echo "  [1] Script syntax"
 assert_true "anchors passes bash -n syntax check" "bash -n '$CLI'"
 
-echo "  [2] E-ANCHORS-CLI-SUBCOMMANDS: Subcommand dispatch"
+echo "  [2] E-ANCHORS-CLI-SKILL-BOUNDARY: Subcommand dispatch"
 assert_grep "Has install subcommand" 'install)' "$CLI"
 assert_grep "Has setup subcommand" 'setup)' "$CLI"
 assert_grep "Has check subcommand" 'check)' "$CLI"
 assert_grep "Has upgrade subcommand" 'upgrade)' "$CLI"
 assert_grep "Has usage function" 'usage()' "$CLI"
 
-echo "  [3] E-ANCHORS-CLI-AGENT-DETECT: Agent detection"
+echo "  [3] E-ANCHORS-AGENT-AGNOSTIC: Agent detection"
 assert_grep "Detects .claude/ directory" '\.claude/' "$CLI"
 assert_grep "Detects .goose/ directory" '\.goose/' "$CLI"
 assert_grep "Detects .agents/ directory" '\.agents/' "$CLI"
 assert_grep "Detects ai-rules/ directory" 'ai-rules/' "$CLI"
 assert_grep "Accepts --agent flag" '\-\-agent' "$CLI"
 
-echo "  [4] E-ANCHORS-CLI-SKILL-TARGET-DIRS: Project-level skill paths"
+echo "  [4] E-ANCHORS-AGENT-AGNOSTIC: Project-level skill paths"
 assert_grep "Claude Code project path" '\.claude/skills/' "$CLI"
 assert_grep "Goose project path" '\.goose/skills/' "$CLI"
 assert_grep "Amp project path" '\.agents/skills/' "$CLI"
 assert_grep "ai-rules project path" 'ai-rules/skills/' "$CLI"
 
-echo "  [5] E-ANCHORS-CLI-SCAFFOLD: Setup creates document skeletons"
+echo "  [5] E-ANCHORS-CLI-SKILL-BOUNDARY: Setup creates document skeletons"
 assert_grep "Creates ANCHORS.md" 'ANCHORS\.md' "$CLI"
 assert_grep "Creates PRODUCT.md" 'PRODUCT\.md' "$CLI"
-assert_grep "Creates ERD.md" 'ERD\.md' "$CLI"
+assert_grep "Creates ENGINEERING.md" 'ENGINEERING\.md' "$CLI"
 assert_grep "Creates TESTING.md" 'TESTING\.md' "$CLI"
 assert_grep "Creates DEPENDENCIES.md" 'DEPENDENCIES\.md' "$CLI"
 assert_grep "Accepts --prefix flag" '\-\-prefix' "$CLI"
 assert_grep "Accepts --mode flag" '\-\-mode' "$CLI"
 
-echo "  [6] E-ANCHORS-CLI-INSTRUCTIONS-DIRECT: Agent instructions handling"
+echo "  [6] E-ANCHORS-AGENT-AGNOSTIC: Agent instructions handling"
 assert_grep "Has append_agent_instructions function" 'append_agent_instructions' "$CLI"
 assert_grep "Checks for AGENTS.md" 'AGENTS.md' "$CLI"
 assert_grep "Checks for CLAUDE.md" 'CLAUDE.md' "$CLI"
 assert_grep "Handles symlinks with readlink" 'readlink' "$CLI"
 assert_grep "Skips if ANCHORS section present" '## ANCHORS' "$CLI"
 
-echo "  [7] E-ANCHORS-CLI-AIRULES-CHECKS: ai-rules prerequisites"
+echo "  [7] E-ANCHORS-AGENT-AGNOSTIC: ai-rules prerequisites"
 assert_grep "Checks for ai-rules CLI" 'command -v ai-rules' "$CLI"
 assert_grep "Checks for ai-rules directory" '! -d.*ai-rules' "$CLI"
 assert_grep "CLI not found error message" 'ai-rules CLI not found' "$CLI"
 assert_grep "Runs ai-rules generate" 'ai-rules generate' "$CLI"
 
-echo "  [8] E-ANCHORS-CLI-INSTRUCTIONS-AIRULES: ai-rules rule file"
+echo "  [8] E-ANCHORS-AGENT-AGNOSTIC: ai-rules rule file"
 assert_grep "Creates ai-rules/anchors.md" 'ai-rules/anchors.md' "$CLI"
 
-echo "  [9] E-ANCHORS-CLI-CHECK-STRUCTURAL: Check subcommand features"
+echo "  [9] E-ANCHORS-CLI-SKILL-BOUNDARY: Check subcommand features"
 assert_grep "Check requires ANCHORS.md" 'No ANCHORS.md found' "$CLI"
 assert_grep "Check validates backlinks" '←.*P-' "$CLI"
 assert_grep "Check outputs structured report" 'Check Report' "$CLI"
 assert_grep "Check reports open questions" 'Open Questions' "$CLI"
 
-echo "  [10] E-ANCHORS-CLI-UPGRADE: Upgrade subcommand"
+echo "  [10] E-ANCHORS-CLI-SKILL-BOUNDARY: Upgrade subcommand"
 assert_grep "Upgrade removes existing skill" 'rm -rf' "$CLI"
 assert_grep "Upgrade copies new skill" 'cp -R' "$CLI"
 assert_grep "Upgrade has --force flag" '\-\-force' "$CLI"
@@ -82,7 +77,7 @@ assert_grep "CLI blocks downgrade" 'newer than CLI version' "$CLI"
 assert_grep "CLI detects equal version" 'Already at version' "$CLI"
 assert_grep "CLI shows --force hint" 'Use --force to downgrade' "$CLI"
 
-echo "  [11] E-ANCHORS-SETUP-PREFIX-UNIQUE: Prefix uniqueness check"
+echo "  [11] E-ANCHORS-IDEMPOTENT-OPS: Prefix uniqueness check"
 assert_grep "Checks prefix uniqueness" 'check_prefix_unique' "$CLI"
 assert_grep "Reports prefix collision" "Prefix.*already used" "$CLI"
 
@@ -102,7 +97,7 @@ assert_file_exists "Skill installed" "${tmpdir}/.claude/skills/anchors/SKILL.md"
 
 assert_file_exists "ANCHORS.md created" "${tmpdir}/mymod/ANCHORS.md"
 assert_file_exists "PRODUCT.md created" "${tmpdir}/mymod/PRODUCT.md"
-assert_file_exists "ERD.md created" "${tmpdir}/mymod/ERD.md"
+assert_file_exists "ENGINEERING.md created" "${tmpdir}/mymod/ENGINEERING.md"
 assert_file_exists "TESTING.md created" "${tmpdir}/mymod/TESTING.md"
 assert_file_exists "DEPENDENCIES.md created" "${tmpdir}/mymod/DEPENDENCIES.md"
 assert_grep "ANCHORS.md has correct prefix" '^prefix: MYMOD' "${tmpdir}/mymod/ANCHORS.md"
@@ -225,5 +220,94 @@ fi
 
 echo "  [25] Functional: install includes VERSION file"
 assert_file_exists "VERSION copied during install" "${tmpdir}/.claude/skills/anchors/VERSION"
+
+echo "  [26] Functional: upgrade migrates ERD.md → ENGINEERING.md"
+upgrade_tmpdir=$(mktemp -d)
+trap "rm -rf '${tmpdir}' '${goose_tmpdir}' '${upgrade_tmpdir}'" EXIT
+mkdir -p "${upgrade_tmpdir}/.claude"
+# Install skill so upgrade has something to replace
+(cd "${upgrade_tmpdir}" && "$CLI" install --agent claude) >/dev/null 2>&1
+# Set up a module with legacy ERD.md (simulate pre-upgrade state)
+mkdir -p "${upgrade_tmpdir}/legmod"
+printf '%s\n' '---' 'prefix: LEG' '---' > "${upgrade_tmpdir}/legmod/ANCHORS.md"
+printf '%s\n' '---' 'see-also:' '  - ERD.md' '---' '# Product' > "${upgrade_tmpdir}/legmod/PRODUCT.md"
+printf '%s\n' '---' 'see-also:' '  - ERD.md' '---' '# Testing' > "${upgrade_tmpdir}/legmod/TESTING.md"
+printf '%s\n' '# Engineering' > "${upgrade_tmpdir}/legmod/ERD.md"
+# Run upgrade
+upgrade_output=$( (cd "${upgrade_tmpdir}" && "$CLI" upgrade --agent claude) 2>&1 )
+# ERD.md should be renamed
+assert_file_exists "ENGINEERING.md exists after upgrade" "${upgrade_tmpdir}/legmod/ENGINEERING.md"
+inc_test
+if [[ ! -f "${upgrade_tmpdir}/legmod/ERD.md" ]]; then
+  echo "    ✓ ERD.md removed after upgrade"
+else
+  echo "    ✗ ERD.md still exists after upgrade"
+  inc_fail
+fi
+# Sibling see-also references should be updated
+assert_grep "PRODUCT.md updated to ENGINEERING.md" 'ENGINEERING.md' "${upgrade_tmpdir}/legmod/PRODUCT.md"
+assert_no_grep "PRODUCT.md no longer references ERD.md" 'ERD\.md' "${upgrade_tmpdir}/legmod/PRODUCT.md"
+assert_grep "TESTING.md updated to ENGINEERING.md" 'ENGINEERING.md' "${upgrade_tmpdir}/legmod/TESTING.md"
+assert_no_grep "TESTING.md no longer references ERD.md" 'ERD\.md' "${upgrade_tmpdir}/legmod/TESTING.md"
+# Content should be preserved
+assert_grep "ENGINEERING.md has original content" '# Engineering' "${upgrade_tmpdir}/legmod/ENGINEERING.md"
+
+echo "  [27] Functional: upgrade warns when both ERD.md and ENGINEERING.md exist"
+mkdir -p "${upgrade_tmpdir}/bothmod"
+printf '%s\n' '---' 'prefix: BOTH' '---' > "${upgrade_tmpdir}/bothmod/ANCHORS.md"
+printf '%s\n' '# Old' > "${upgrade_tmpdir}/bothmod/ERD.md"
+printf '%s\n' '# New' > "${upgrade_tmpdir}/bothmod/ENGINEERING.md"
+upgrade_both_output=$( (cd "${upgrade_tmpdir}" && "$CLI" upgrade --agent claude) 2>&1 )
+inc_test
+if echo "$upgrade_both_output" | grep -q 'Warning.*both.*ERD.md.*ENGINEERING.md'; then
+  echo "    ✓ Upgrade warns about both files existing"
+else
+  echo "    ✗ Upgrade should warn about both files"
+  inc_fail
+fi
+# Neither file should be modified
+assert_grep "ERD.md preserved" '# Old' "${upgrade_tmpdir}/bothmod/ERD.md"
+assert_grep "ENGINEERING.md preserved" '# New' "${upgrade_tmpdir}/bothmod/ENGINEERING.md"
+
+echo "  [28] Functional: check works with legacy ERD.md"
+legacy_tmpdir=$(mktemp -d)
+trap "rm -rf '${tmpdir}' '${goose_tmpdir}' '${upgrade_tmpdir}' '${legacy_tmpdir}'" EXIT
+mkdir -p "${legacy_tmpdir}/legcheck"
+printf '%s\n' '---' 'prefix: LEGCHK' '---' > "${legacy_tmpdir}/legcheck/ANCHORS.md"
+cat > "${legacy_tmpdir}/legcheck/PRODUCT.md" << 'LEGACY'
+---
+scope: Product requirements
+see-also:
+  - ERD.md
+---
+# Product
+- <a id="P-LEGCHK-FEAT"></a>**P-LEGCHK-FEAT**: A feature.
+LEGACY
+cat > "${legacy_tmpdir}/legcheck/ERD.md" << 'LEGACY'
+---
+scope: Engineering requirements
+see-also:
+  - PRODUCT.md
+---
+# Engineering
+- <a id="E-LEGCHK-IMPL"></a>**E-LEGCHK-IMPL**: Implementation.
+  ← [P-LEGCHK-FEAT](PRODUCT.md#P-LEGCHK-FEAT)
+LEGACY
+check_legacy_output=$("$CLI" check "${legacy_tmpdir}/legcheck" 2>&1 || true)
+inc_test
+if echo "$check_legacy_output" | grep -q 'Engineering.*PRD backlinks: 1/1'; then
+  echo "    ✓ Check finds E-* IDs in legacy ERD.md"
+else
+  echo "    ✗ Check should find E-* IDs in legacy ERD.md"
+  echo "    Output: $check_legacy_output"
+  inc_fail
+fi
+inc_test
+if echo "$check_legacy_output" | grep -q 'PRD coverage.*1/1'; then
+  echo "    ✓ Check finds P-* coverage via legacy ERD.md"
+else
+  echo "    ✗ Check should find P-* coverage via legacy ERD.md"
+  inc_fail
+fi
 
 finish_tests

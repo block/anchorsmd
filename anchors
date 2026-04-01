@@ -1,6 +1,6 @@
 #!/bin/bash
 # anchors — CLI for the ANCHORS requirements-driven development framework
-# E-ANCHORS-CLI-SUBCOMMANDS: dispatches to install, setup, check, upgrade subcommands
+# E-ANCHORS-CLI-SKILL-BOUNDARY: dispatches to install, setup, check, upgrade subcommands
 set -eo pipefail
 
 SCRIPT_SOURCE="$0"
@@ -19,14 +19,26 @@ This repo uses ANCHORS for requirements-driven development. **You MUST load the 
 
 When adding or modifying features, you must update ALL THREE documents before writing code:
 1. **PRODUCT.md** — Add a P-* requirement (user-facing behavior only)
-2. **ERD.md** — Add an E-* requirement with `←` backlink to the P-* ID
+2. **ENGINEERING.md** — Add an E-* requirement with `←` backlink to the P-* ID
 3. **TESTING.md** — Update the testing strategy so every new/changed requirement has coverage in the appropriate layer sections and coverage invariants. Always verify the document reflects the current scope.
 
 Implementation and test code must include inline requirement ID comments (e.g., `// E-FEATURE-NAME`).'
 
 # --- Shared helpers ---
 
-# E-ANCHORS-CLI-INSTRUCTIONS-DIRECT: append ANCHORS section to agent instructions
+# Resolve engineering doc name (ENGINEERING.md preferred, ERD.md as legacy fallback)
+resolve_engineering_doc() {
+  local dir="$1"
+  if [ -f "${dir}/ENGINEERING.md" ]; then
+    echo "ENGINEERING.md"
+  elif [ -f "${dir}/ERD.md" ]; then
+    echo "ERD.md"
+  else
+    echo "ENGINEERING.md"
+  fi
+}
+
+# E-ANCHORS-AGENT-AGNOSTIC: append ANCHORS section to agent instructions
 append_agent_instructions() {
   local agents_md="AGENTS.md"
   local claude_md="CLAUDE.md"
@@ -74,7 +86,7 @@ append_agent_instructions() {
   fi
 }
 
-# E-ANCHORS-CLI-AGENT-DETECT: detect agent from flags or repo structure
+# E-ANCHORS-AGENT-AGNOSTIC: detect agent from flags or repo structure
 detect_agent() {
   local agent_flag="${1:-}"
   if [ -n "${agent_flag}" ]; then
@@ -94,7 +106,7 @@ detect_agent() {
   fi
 }
 
-# E-ANCHORS-CLI-SKILL-TARGET-DIRS: map agent to project-level skill path
+# E-ANCHORS-AGENT-AGNOSTIC: map agent to project-level skill path
 skill_target_dir() {
   local agent="$1"
   case "${agent}" in
@@ -107,7 +119,7 @@ skill_target_dir() {
   esac
 }
 
-# E-ANCHORS-CLI-SKILL-REPLACE: install skill files to target location
+# E-ANCHORS-IDEMPOTENT-OPS: install skill files to target location
 install_skill() {
   local agent="$1"
   local target_dir
@@ -119,7 +131,7 @@ install_skill() {
     return 0
   fi
 
-  # E-ANCHORS-CLI-AIRULES-CHECKS: validate ai-rules prerequisites
+  # E-ANCHORS-AGENT-AGNOSTIC: validate ai-rules prerequisites
   if [ "${agent}" = "airules" ]; then
     if ! command -v ai-rules &>/dev/null; then
       echo "Error: ai-rules CLI not found." >&2
@@ -143,7 +155,7 @@ install_skill() {
 
   # Agent instructions
   if [ "${agent}" = "airules" ]; then
-    # E-ANCHORS-CLI-INSTRUCTIONS-AIRULES: create ai-rules rule file
+    # E-ANCHORS-AGENT-AGNOSTIC: create ai-rules rule file
     if [ ! -e "ai-rules/anchors.md" ]; then
       printf '%s\n' "${ANCHORS_SECTION}" > "ai-rules/anchors.md"
       echo "Created ai-rules/anchors.md"
@@ -155,7 +167,7 @@ install_skill() {
   fi
 }
 
-# E-ANCHORS-SETUP-PREFIX-UNIQUE: check prefix uniqueness across repo
+# E-ANCHORS-IDEMPOTENT-OPS: check prefix uniqueness across repo
 check_prefix_unique() {
   local prefix="$1"
   local target_dir="$2"
@@ -213,7 +225,7 @@ version_compare() {
 
 # --- Subcommands ---
 
-# E-ANCHORS-CLI-INSTALL: install subcommand — one-time repo setup
+# E-ANCHORS-AGENT-AGNOSTIC: install subcommand — one-time repo setup
 cmd_install() {
   local agent_flag=""
 
@@ -234,7 +246,7 @@ cmd_install() {
   install_skill "${agent}"
 }
 
-# E-ANCHORS-CLI-SETUP-FLOW: setup subcommand — scaffold docs in a directory
+# E-ANCHORS-CLI-SKILL-BOUNDARY: setup subcommand — scaffold docs in a directory
 cmd_setup() {
   local prefix=""
   local mode="embedded"
@@ -275,7 +287,7 @@ cmd_setup() {
   # Create target directory if needed
   mkdir -p "${target_path}"
 
-  # E-ANCHORS-CLI-SCAFFOLD: create document skeleton files
+  # E-ANCHORS-CLI-SKILL-BOUNDARY: create document skeleton files
   local created=0
 
   # ANCHORS.md
@@ -308,7 +320,7 @@ cmd_setup() {
 ---
 scope: Product requirements — observable behavior, outcomes, and qualities. No implementation approach.
 see-also:
-  - ERD.md — technical requirements derived from this document.
+  - ENGINEERING.md — engineering architecture; must not contradict this document.
   - TESTING.md — testing strategy covering these requirements.
   - DEPENDENCIES.md — external dependencies the system cannot supply itself.
 ---
@@ -328,21 +340,21 @@ TEMPLATE
     created=$((created + 1))
   fi
 
-  # ERD.md
-  local erd_file="${target_path}/ERD.md"
-  if [ -f "${erd_file}" ] && $skip_existing; then
-    echo "Skipping existing ${erd_file}"
+  # ENGINEERING.md (also check for legacy ERD.md)
+  local eng_file="${target_path}/ENGINEERING.md"
+  if { [ -f "${eng_file}" ] || [ -f "${target_path}/ERD.md" ]; } && $skip_existing; then
+    echo "Skipping existing ${eng_file}"
   else
-    cat > "${erd_file}" << 'TEMPLATE'
+    cat > "${eng_file}" << 'TEMPLATE'
 ---
-scope: Engineering requirements — how the system achieves the product requirements. Technical decisions, mechanisms, and interfaces. Derived from product requirements.
+scope: Engineering architecture — rules, principles, and constraints that govern how the system achieves the product requirements. Organized by cross-cutting concern.
 see-also:
-  - PRODUCT.md — product requirements that drive the technical decisions in this document.
+  - PRODUCT.md — product requirements that drive the engineering rules in this document.
   - TESTING.md — testing strategy covering these requirements.
   - DEPENDENCIES.md — external dependencies that the system cannot supply itself.
 ---
 
-# Engineering Requirements
+# Engineering Architecture
 
 ---
 
@@ -365,7 +377,7 @@ TEMPLATE
 scope: Automated testing strategy — test pyramid, tooling, and coverage targets.
 see-also:
   - PRODUCT.md — product requirements that define acceptance criteria.
-  - ERD.md — technical requirements and interfaces under test.
+  - ENGINEERING.md — engineering architecture and rules under test.
 ---
 
 # Testing Strategy
@@ -382,7 +394,7 @@ TEMPLATE
 ---
 scope: External dependencies — tools and services that must be present in the environment because the system cannot supply them itself.
 see-also:
-  - ERD.md — engineering requirements, including managed toolchains that eliminate would-be dependencies.
+  - ENGINEERING.md — engineering architecture, including managed toolchains that eliminate would-be dependencies.
   - PRODUCT.md — product requirements that drive deployment modes.
 ---
 
@@ -394,7 +406,7 @@ TEMPLATE
   echo "Scaffolded ${created} document(s) in ${target_path}"
 }
 
-# E-ANCHORS-CLI-CHECK-STRUCTURAL: check subcommand
+# E-ANCHORS-CLI-SKILL-BOUNDARY: check subcommand
 cmd_check() {
   local module_path=""
 
@@ -448,10 +460,12 @@ cmd_check() {
     local dir="${module_dirs[$i]}"
     local prefix="${prefixes[$i]}"
 
-    # Check document presence
+    # Check document presence (accept ENGINEERING.md or legacy ERD.md)
+    local eng_doc
+    eng_doc="$(resolve_engineering_doc "${dir}")"
     local doc_count=0
     local missing_docs=()
-    for doc in PRODUCT.md ERD.md TESTING.md DEPENDENCIES.md; do
+    for doc in PRODUCT.md "${eng_doc}" TESTING.md DEPENDENCIES.md; do
       if [ -f "${dir}/${doc}" ]; then
         doc_count=$((doc_count + 1))
       else
@@ -512,24 +526,24 @@ cmd_check() {
 
     # Extract E-* IDs and check backlinks
     local e_ids=()
-    if [ -f "${dir}/ERD.md" ]; then
+    if [ -f "${dir}/${eng_doc}" ]; then
       while IFS= read -r eid; do
         [ -z "${eid}" ] && continue
         e_ids+=("${eid}")
         total_e=$((total_e + 1))
         # Check for backlink within 5 lines after the ID
-        if grep -A5 "id=\"${eid}\"" "${dir}/ERD.md" 2>/dev/null | grep -q '←.*\[P-'; then
+        if grep -A5 "id=\"${eid}\"" "${dir}/${eng_doc}" 2>/dev/null | grep -q '←.*\[P-'; then
           total_e_with_backlink=$((total_e_with_backlink + 1))
         else
           missing_backlinks+=("${prefix}: ${eid}")
           errors=$((errors + 1))
         fi
-      done < <(grep -oE 'id="E-[A-Z0-9-]+"' "${dir}/ERD.md" 2>/dev/null | sed 's/id="//;s/"//' || true)
+      done < <(grep -oE 'id="E-[A-Z0-9-]+"' "${dir}/${eng_doc}" 2>/dev/null | sed 's/id="//;s/"//' || true)
     fi
 
     # Check PRD coverage
     for pid in "${p_ids[@]+"${p_ids[@]}"}"; do
-      if [ -f "${dir}/ERD.md" ] && grep -q "${pid}" "${dir}/ERD.md" 2>/dev/null; then
+      if [ -f "${dir}/${eng_doc}" ] && grep -q "${pid}" "${dir}/${eng_doc}" 2>/dev/null; then
         total_p_covered=$((total_p_covered + 1))
       else
         uncovered_prd+=("${prefix}: ${pid}")
@@ -539,7 +553,7 @@ cmd_check() {
 
     # Check for open questions — match **OPEN-* pattern (the documented format)
     # Skip: resolved (~~OPEN-), backtick-quoted (`OPEN-*`), inside HTML anchors, requirement IDs containing OPEN-
-    for doc in PRODUCT.md ERD.md TESTING.md DEPENDENCIES.md; do
+    for doc in PRODUCT.md "${eng_doc}" TESTING.md DEPENDENCIES.md; do
       if [ -f "${dir}/${doc}" ]; then
         while IFS= read -r oq; do
           [ -z "${oq}" ] && continue
@@ -549,7 +563,7 @@ cmd_check() {
     done
 
     # Check forward references for detached modules
-    if grep -q 'mode: detached' "${dir}/ANCHORS.md" 2>/dev/null && [ -f "${dir}/ERD.md" ]; then
+    if grep -q 'mode: detached' "${dir}/ANCHORS.md" 2>/dev/null && [ -f "${dir}/${eng_doc}" ]; then
       local dpath
       dpath="$(grep -E '^path:' "${dir}/ANCHORS.md" 2>/dev/null | head -1 | sed 's/^path:[[:space:]]*//' || true)"
       if [ -n "${dpath}" ]; then
@@ -577,14 +591,14 @@ cmd_check() {
                 errors=$((errors + 1))
               fi
             done
-          done < <(grep '^  →' "${dir}/ERD.md" 2>/dev/null || true)
+          done < <(grep '^  →' "${dir}/${eng_doc}" 2>/dev/null || true)
         fi
       fi
     fi
   done
 
-  echo "- ERD → PRD backlinks: ${total_e_with_backlink}/${total_e}$([ ${total_e} -gt 0 ] && [ ${total_e_with_backlink} -lt ${total_e} ] && echo " ($(( total_e - total_e_with_backlink )) missing)" || true)"
-  echo "- PRD coverage by ERD: ${total_p_covered}/${total_p}$([ ${total_p} -gt 0 ] && [ ${total_p_covered} -eq ${total_p} ] && echo " (100%)" || true)"
+  echo "- Engineering → PRD backlinks: ${total_e_with_backlink}/${total_e}$([ ${total_e} -gt 0 ] && [ ${total_e_with_backlink} -lt ${total_e} ] && echo " ($(( total_e - total_e_with_backlink )) missing)" || true)"
+  echo "- PRD coverage by Engineering: ${total_p_covered}/${total_p}$([ ${total_p} -gt 0 ] && [ ${total_p_covered} -eq ${total_p} ] && echo " (100%)" || true)"
 
   # Print gaps
   echo ""
@@ -592,7 +606,7 @@ cmd_check() {
 
   if [ ${#missing_backlinks[@]} -gt 0 ]; then
     echo ""
-    echo "#### Missing ERD Backlinks"
+    echo "#### Missing Engineering Backlinks"
     for bl in "${missing_backlinks[@]}"; do
       echo "- ${bl} (no ← P-* link)"
     done
@@ -629,7 +643,7 @@ cmd_check() {
   fi
 }
 
-# E-ANCHORS-CLI-UPGRADE: upgrade subcommand
+# E-ANCHORS-CLI-SKILL-BOUNDARY: upgrade subcommand
 cmd_upgrade() {
   local agent_flag=""
   local force=false
@@ -701,6 +715,33 @@ cmd_upgrade() {
     echo "Running ai-rules generate..."
     ai-rules generate
   fi
+
+  # Migrate ERD.md → ENGINEERING.md in all ANCHORS modules
+  while IFS= read -r anchors_file; do
+    local mdir
+    mdir="$(dirname "${anchors_file}")"
+    if [ -f "${mdir}/ERD.md" ] && [ ! -f "${mdir}/ENGINEERING.md" ]; then
+      mv "${mdir}/ERD.md" "${mdir}/ENGINEERING.md"
+      echo "Migrated ${mdir}/ERD.md → ENGINEERING.md"
+      # Update see-also references in sibling docs (portable: works on BSD and GNU sed)
+      for sibling in PRODUCT.md TESTING.md DEPENDENCIES.md; do
+        if [ -f "${mdir}/${sibling}" ]; then
+          local tmpfile="${mdir}/${sibling}.anchors_tmp"
+          sed 's/ERD\.md/ENGINEERING.md/g' "${mdir}/${sibling}" > "${tmpfile}" && mv "${tmpfile}" "${mdir}/${sibling}"
+        fi
+      done
+    elif [ -f "${mdir}/ERD.md" ] && [ -f "${mdir}/ENGINEERING.md" ]; then
+      echo "Warning: ${mdir} has both ERD.md and ENGINEERING.md — skipping migration (resolve manually)"
+    fi
+  done < <(find . -name ANCHORS.md -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/vendor/*' 2>/dev/null)
+
+  # Update ANCHORS section in agent instructions files (portable sed)
+  for instrfile in AGENTS.md CLAUDE.md; do
+    if [ -f "${instrfile}" ] && [ ! -L "${instrfile}" ]; then
+      local tmpfile="${instrfile}.anchors_tmp"
+      sed 's/\*\*ERD\.md\*\*/\*\*ENGINEERING.md\*\*/g' "${instrfile}" > "${tmpfile}" && mv "${tmpfile}" "${instrfile}"
+    fi
+  done
 }
 
 # --- Usage ---
