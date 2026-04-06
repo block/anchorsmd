@@ -23,7 +23,7 @@ ANCHORS is a requirements-driven development framework consisting of a CLI tool 
 - The framework is lightweight — plain markdown files, no build tooling required
 - The framework is agent-agnostic — documents are plain markdown, the skill works across agents
 
-**Deployment model:** The `anchors` CLI is installed globally via a package manager. It handles deterministic operations: scaffolding document skeletons, structural linting, and managing skill files in repos. The `/anchors` skill handles LLM-powered operations: researching codebases, populating requirements content, semantic analysis, and converting detached modules. The skill invokes the CLI for its deterministic steps.
+**Deployment model:** The `anchors` CLI is installed globally via a package manager. It handles distribution (`install`, `upgrade`) and CI (`check` in pipelines). The `/anchors` skill handles all interactive agent work: researching codebases, scaffolding and populating documents, structural and semantic validation, and converting detached modules. The skill and CLI are independent at runtime — the skill never invokes the CLI.
 
 ---
 
@@ -116,6 +116,8 @@ ANCHORS is a requirements-driven development framework consisting of a CLI tool 
 - <a id="P-ANCHORS-CLI-AGENTS"></a>**P-ANCHORS-CLI-AGENTS**: The CLI supports multiple AI coding agents: Claude Code, Amp, Codex, Goose, and ai-rules. The agent is specified via `--agent` flag or auto-detected from the repo. Skill files are copied to the agent-appropriate project-level location.
 
 - <a id="P-ANCHORS-CLI-AIRULES"></a>**P-ANCHORS-CLI-AIRULES**: When the agent is ai-rules, the CLI copies the skill into the project's `ai-rules/skills/` directory and runs `ai-rules generate`. This requires the `ai-rules` CLI to be installed and an `ai-rules/` directory to exist in the project.
+
+- <a id="P-ANCHORS-SKILL-SELF-SUFFICIENT"></a>**P-ANCHORS-SKILL-SELF-SUFFICIENT**: The skill and CLI have separate runtime concerns. The skill scaffolds documents and performs structural validation directly using agent tools — it never invokes the CLI. The CLI handles distribution (`install`, `upgrade`) and CI (`check` in pipelines).
 
 ---
 

@@ -8,7 +8,7 @@ see-also:
 
 # ANCHORS: Engineering Architecture
 
-ANCHORS consists of two components: an `anchors` CLI (bash script with subcommands) for deterministic operations, and a skill (`SKILL.md` plus templates) for LLM-powered operations. The CLI handles scaffolding, structural linting, and skill file management. The skill handles codebase research, content population, semantic analysis, and interactive workflows. The skill invokes the CLI for its deterministic steps.
+ANCHORS consists of two components with separate runtime concerns. The `anchors` CLI (bash script) handles distribution (`install`, `upgrade`) and CI (`check` in pipelines). The skill (`SKILL.md`) handles all interactive agent work: scaffolding, research, content population, structural and semantic validation, and interactive workflows. The skill never invokes the CLI — it performs scaffolding and validation directly using agent tools.
 
 ---
 
@@ -48,9 +48,9 @@ ANCHORS consists of two components: an `anchors` CLI (bash script with subcomman
 
 ## CLI vs. Skill Boundary
 
-- <a id="E-ANCHORS-CLI-SKILL-BOUNDARY"></a>**E-ANCHORS-CLI-SKILL-BOUNDARY**: Deterministic operations live in the CLI: scaffolding document skeletons (`setup`), structural linting (`check`), skill file management (`install`, `upgrade`). Non-deterministic operations live in the skill: codebase research, content population, semantic analysis, interactive workflows. The skill invokes the CLI for its deterministic steps. The CLI runs without an LLM and exits with non-zero status on errors, making it suitable for CI. The check report is structured markdown with sections for modules, traceability statistics, and categorized gaps.
+- <a id="E-ANCHORS-CLI-SKILL-BOUNDARY"></a>**E-ANCHORS-CLI-SKILL-BOUNDARY**: The CLI and skill are independent at runtime. The CLI handles distribution (`install`, `upgrade`) and CI (`check` in pipelines) — it runs without an LLM, exits non-zero on errors, and is suitable for automation. The skill handles all interactive agent work — scaffolding documents directly, performing structural validation using agent tools (glob, grep, read), researching codebases, populating content, and semantic analysis. The skill never shells out to the CLI. Both produce the same structured check report format (modules, traceability stats, categorized gaps).
 
-  **Why:** The CLI is fast, testable, and CI-friendly because it has no LLM dependency. The skill handles tasks that require judgment. Mixing the two would make both harder to test and harder to trust. A clear boundary means each component can evolve independently.
+  **Why:** Agents working in a repo may not have the CLI installed. If the skill depended on the CLI, any agent without it would silently create drift between documents and code. Independent runtime means the skill works with just the skill file — no homebrew, no PATH dependency. The CLI remains valuable for CI pipelines and for getting the skill into repos, but it's not a gate on the interactive workflow.
 
   ← [P-ANCHORS-CLI](PRODUCT.md#P-ANCHORS-CLI)
   ← [P-ANCHORS-CLI-SETUP](PRODUCT.md#P-ANCHORS-CLI-SETUP)
@@ -58,6 +58,7 @@ ANCHORS consists of two components: an `anchors` CLI (bash script with subcomman
   ← [P-ANCHORS-CLI-UPGRADE](PRODUCT.md#P-ANCHORS-CLI-UPGRADE)
   ← [P-ANCHORS-SETUP-SCAFFOLD](PRODUCT.md#P-ANCHORS-SETUP-SCAFFOLD)
   ← [P-ANCHORS-CHECK-REPORT](PRODUCT.md#P-ANCHORS-CHECK-REPORT)
+  ← [P-ANCHORS-SKILL-SELF-SUFFICIENT](PRODUCT.md#P-ANCHORS-SKILL-SELF-SUFFICIENT)
 
 ---
 
@@ -76,14 +77,15 @@ ANCHORS consists of two components: an `anchors` CLI (bash script with subcomman
 
 ## Idempotent Operations
 
-- <a id="E-ANCHORS-IDEMPOTENT-OPS"></a>**E-ANCHORS-IDEMPOTENT-OPS**: Setup, install, and upgrade are safe to re-run. Setup detects existing files and offers skip/overwrite. Install detects an existing skill and skips. Upgrade removes the existing skill directory and copies the current version. Prefix uniqueness is enforced at setup time by globbing all `ANCHORS.md` files in the repo and rejecting duplicates. Agent instructions are appended only if no ANCHORS section already exists.
+- <a id="E-ANCHORS-IDEMPOTENT-OPS"></a>**E-ANCHORS-IDEMPOTENT-OPS**: Setup, install, and upgrade are safe to re-run. Setup detects existing files and offers skip/overwrite. Install detects an existing skill and skips. Upgrade compares installed and bundled semver versions — it refuses downgrades (unless `--force`), skips when already current, and proceeds on dev builds regardless. Prefix uniqueness is enforced at setup time by globbing all `ANCHORS.md` files in the repo and rejecting duplicates. Agent instructions are appended only if no ANCHORS section already exists.
 
-  **Why:** Users shouldn't fear re-running commands. Idempotency means recovery from partial failures is "just run it again." Prefix uniqueness at setup time prevents cross-module ID collisions that would be expensive to diagnose later.
+  **Why:** Users shouldn't fear re-running commands. Idempotency means recovery from partial failures is "just run it again." Version comparison prevents accidental downgrades while `--force` provides an escape hatch. Prefix uniqueness at setup time prevents cross-module ID collisions that would be expensive to diagnose later.
 
   ← [P-ANCHORS-INSTALL](PRODUCT.md#P-ANCHORS-INSTALL)
   ← [P-ANCHORS-SETUP-EXISTING](PRODUCT.md#P-ANCHORS-SETUP-EXISTING)
   ← [P-ANCHORS-SETUP-UNIQUE-PREFIX](PRODUCT.md#P-ANCHORS-SETUP-UNIQUE-PREFIX)
   ← [P-ANCHORS-CLI-UPGRADE](PRODUCT.md#P-ANCHORS-CLI-UPGRADE)
+  ← [P-ANCHORS-UPGRADE-VERSION](PRODUCT.md#P-ANCHORS-UPGRADE-VERSION)
 
 ---
 
