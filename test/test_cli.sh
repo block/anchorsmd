@@ -66,10 +66,10 @@ assert_grep "Upgrade removes existing skill" 'rm -rf' "$CLI"
 assert_grep "Upgrade copies new skill" 'cp -R' "$CLI"
 assert_grep "Upgrade has --force flag" '\-\-force' "$CLI"
 
-echo "  [10b] E-ANCHORS-VERSION-FILE: VERSION file exists in skill directory"
+echo "  [10b] E-ANCHORS-IDEMPOTENT-OPS: VERSION file exists in skill directory"
 assert_file_exists "skill/VERSION exists" "$REPO_ROOT/skill/VERSION"
 
-echo "  [10c] E-ANCHORS-VERSION-COMPARE: Version comparison in CLI"
+echo "  [10c] E-ANCHORS-IDEMPOTENT-OPS: Version comparison in CLI"
 assert_grep "CLI has version_compare function" 'version_compare' "$CLI"
 assert_grep "CLI reads installed VERSION" 'target_dir.*VERSION' "$CLI"
 assert_grep "CLI reads bundled VERSION" 'SKILL_SOURCE.*VERSION' "$CLI"
@@ -197,8 +197,12 @@ else
 fi
 
 echo "  [23] Functional: upgrade skips when versions are equal"
-# After --force, installed VERSION now matches bundled
+# Set a real version (not 0.0.0-dev) so the equal-version check applies
+echo "1.0.0" > "${tmpdir}/.claude/skills/anchors/VERSION"
+echo "1.0.0" > "${REPO_ROOT}/skill/VERSION"
 equal_output=$( (cd "${tmpdir}" && "$CLI" upgrade --agent claude) 2>&1 )
+# Restore dev version
+echo "0.0.0-dev" > "${REPO_ROOT}/skill/VERSION"
 inc_test
 if echo "$equal_output" | grep -q 'Already at version\|already at version'; then
   echo "    ✓ Upgrade skips when already at same version"
@@ -232,6 +236,7 @@ mkdir -p "${upgrade_tmpdir}/legmod"
 printf '%s\n' '---' 'prefix: LEG' '---' > "${upgrade_tmpdir}/legmod/ANCHORS.md"
 printf '%s\n' '---' 'see-also:' '  - ERD.md' '---' '# Product' > "${upgrade_tmpdir}/legmod/PRODUCT.md"
 printf '%s\n' '---' 'see-also:' '  - ERD.md' '---' '# Testing' > "${upgrade_tmpdir}/legmod/TESTING.md"
+printf '%s\n' '---' 'see-also:' '  - ERD.md' '---' '# Dependencies' > "${upgrade_tmpdir}/legmod/DEPENDENCIES.md"
 printf '%s\n' '# Engineering' > "${upgrade_tmpdir}/legmod/ERD.md"
 # Run upgrade
 upgrade_output=$( (cd "${upgrade_tmpdir}" && "$CLI" upgrade --agent claude) 2>&1 )
@@ -249,6 +254,8 @@ assert_grep "PRODUCT.md updated to ENGINEERING.md" 'ENGINEERING.md' "${upgrade_t
 assert_no_grep "PRODUCT.md no longer references ERD.md" 'ERD\.md' "${upgrade_tmpdir}/legmod/PRODUCT.md"
 assert_grep "TESTING.md updated to ENGINEERING.md" 'ENGINEERING.md' "${upgrade_tmpdir}/legmod/TESTING.md"
 assert_no_grep "TESTING.md no longer references ERD.md" 'ERD\.md' "${upgrade_tmpdir}/legmod/TESTING.md"
+assert_grep "DEPENDENCIES.md updated to ENGINEERING.md" 'ENGINEERING.md' "${upgrade_tmpdir}/legmod/DEPENDENCIES.md"
+assert_no_grep "DEPENDENCIES.md no longer references ERD.md" 'ERD\.md' "${upgrade_tmpdir}/legmod/DEPENDENCIES.md"
 # Content should be preserved
 assert_grep "ENGINEERING.md has original content" '# Engineering' "${upgrade_tmpdir}/legmod/ENGINEERING.md"
 

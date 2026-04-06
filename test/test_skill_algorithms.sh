@@ -45,8 +45,8 @@ assert_grep "Setup: check for existing files" 'already exist|Check.*any ANCHORS 
 assert_grep "Setup: skip or overwrite options" 'Skip existing|Overwrite all' "$SKILL_FILE"
 
 echo "  [6] E-ANCHORS-AGENT-AGNOSTIC: Agent instructions via CLI"
-# The skill delegates agent instructions to the CLI via `anchors setup`.
-# Verify the CLI handles it and the skill invokes the CLI.
+# The CLI handles agent instructions during `anchors install`.
+# Verify the CLI has the logic for AGENTS.md/CLAUDE.md management.
 CLI="$REPO_ROOT/anchors"
 assert_grep "CLI: check for AGENTS.md and CLAUDE.md" 'AGENTS\.md.*CLAUDE\.md|agents_md=.*AGENTS' "$CLI"
 assert_grep "CLI: symlink handling" 'symlink|readlink' "$CLI"

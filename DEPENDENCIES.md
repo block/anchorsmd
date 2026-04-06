@@ -1,7 +1,7 @@
 ---
 scope: External dependencies — tools and services that must be present in the environment because the system cannot supply them itself.
 see-also:
-  - ERD.md — engineering requirements, including managed toolchains that eliminate would-be dependencies.
+  - ENGINEERING.md — engineering architecture, including managed toolchains that eliminate would-be dependencies.
   - PRODUCT.md — product requirements that drive deployment modes.
 ---
 

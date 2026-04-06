@@ -284,7 +284,7 @@ Any other args → tell the user the available modes (setup, check, embed).
 
 Set up a complete ANCHORS document set for a project or module. Setup produces fully populated documents — real requirements, real engineering specs, a real testing strategy — not empty templates. A full setup (not "Skip existing") should produce a document set that passes an immediate check.
 
-Setup uses the `anchors` CLI for deterministic steps (skill installation, scaffolding) and the LLM for research and content population.
+The `anchors` CLI handles distribution (`install`, `upgrade`) and CI (`check` in pipelines). The skill handles all interactive work directly — no CLI dependency at runtime.
 
 ### Determine the target path
 
@@ -323,25 +323,7 @@ Setup uses the `anchors` CLI for deterministic steps (skill installation, scaffo
    - Question 2: "What branch/tag/SHA to track?" — Header: "Ref" — Options: `main` (default), `master`, Other
    - Question 3: "Subdirectory within the repo? (leave blank for root)" — Header: "Path" — Free text, defaults to `/`
 
-4. **Invoke the CLI to scaffold.** First, ensure the skill is installed in the repo by running `anchors install` (idempotent — skips if already installed):
-
-   ```bash
-   anchors install
-   ```
-
-   Then scaffold the document skeletons with `anchors setup`:
-
-   ```bash
-   anchors setup ./payments --prefix PAY --mode embedded
-   ```
-
-   For detached mode, also pass `--path`, and optionally `--repo` and `--ref`:
-
-   ```bash
-   anchors setup apps/penpal/anchors --prefix PENPAL --mode detached --path ..
-   ```
-
-   The CLI creates skeleton files (structure but no populated content). If the user chose "Skip existing" in step 1, pass `--skip-existing` so the CLI only creates missing files.
+4. **Verify prefix uniqueness.** Glob for all `**/ANCHORS.md` files in the repo (excluding `node_modules`, `vendor`, `.git`, build output), read their `prefix` fields, and reject duplicates.
 
 5. **Research the project.** The goal is to build a complete understanding of what the project does, how it's built, what it depends on, and how it's tested. The approach depends on mode and whether the target directory contains existing code.
 
@@ -373,9 +355,9 @@ Setup uses the `anchors` CLI for deterministic steps (skill installation, scaffo
 
    The user's description of the project (from the conversation context, or a README, design doc, or similar artifact in the repo) is the source material. If the conversation doesn't contain enough context, use `AskUserQuestion` to ask the user to describe the project — what it does, who it's for, and how it works. This is a single open-ended question, not a multi-step interview.
 
-6. **Populate the documents.** Using the research findings (or user description), the Content Guidelines, Document Structure, and the document format conventions described in the ANCHORS Framework section above, populate the skeleton files created by the CLI with real content. Each document must match its canonical structure exactly — no extra sections, no missing required sections:
+6. **Write the documents.** Using the research findings (or user description), the Content Guidelines, Document Structure, and the document format conventions described in the ANCHORS Framework section above, create each file with real content. Each document needs YAML frontmatter with `scope` (one-line role description) and `see-also` (list of related documents) fields, and must match its canonical structure exactly — no extra sections, no missing required sections:
 
-   - **ANCHORS.md**: Already created by CLI with correct frontmatter. No changes needed.
+   - **ANCHORS.md**: YAML frontmatter with `prefix` (and `mode`, `path`, `repo`, `ref` for detached). No body content.
    - **PRODUCT.md**: Real P-* requirements organized by functional area. Every requirement should describe user-facing behavior, not implementation details. Use the prefix from ANCHORS.md to scope IDs (e.g., prefix `AUTH` → `P-AUTH-LOGIN`).
    - **ENGINEERING.md**: Real E-* requirements organized by cross-cutting architectural concern, each with `←` backlinks to the P-* requirements it governs. Every P-* requirement must be covered by at least one E-* requirement. Each entry should state a rule or principle, explain why it exists, and link to multiple P-* requirements where applicable. **In detached mode**, each E-* requirement should also include `→` forward references to specific file:symbol locations in the target codebase discovered during research.
    - **TESTING.md**: Real testing strategy following the prescribed Document Structure — actual test layers, actual tooling, actual coverage invariants, actual exclusions. Generate exactly the sections listed in the canonical structure. Not boilerplate.
@@ -391,20 +373,21 @@ Setup uses the `anchors` CLI for deterministic steps (skill installation, scaffo
 
 ## Check Mode
 
-Check traceability and consistency across all ANCHORS modules in the repo. Check has two layers: the CLI performs structural validation (deterministic, no LLM), and the skill adds semantic analysis on top.
+Check traceability and consistency across all ANCHORS modules in the repo. Check has two layers: structural validation (deterministic) and semantic analysis (LLM-powered).
 
-### Step 1: Invoke the CLI for structural checks
+### Step 1: Structural checks
 
-Run `anchors check` to perform all deterministic validation. The CLI outputs a structured report covering:
-- Module discovery and prefix collision detection
-- Document presence
-- Frontmatter validation
-- Engineering backlink verification
-- PRD coverage analysis
-- Forward reference validation (detached modules)
-- Open question scanning
+Perform these checks directly:
 
-Review the CLI output. If there are structural errors (missing backlinks, broken refs, prefix collisions), these are definitive — report them directly.
+1. **Module discovery**: Glob for `**/ANCHORS.md` (excluding node_modules, vendor, .git, build output). Read each to extract `prefix` from frontmatter.
+2. **Prefix uniqueness**: Verify no two modules share a prefix.
+3. **Document presence**: For each module, check which of PRODUCT.md, ENGINEERING.md, TESTING.md, DEPENDENCIES.md exist.
+4. **Engineering backlinks**: For each `E-*` ID anchor in ENGINEERING.md (`id="E-..."`), verify a `← [P-*` backlink appears within the next 5 lines.
+5. **PRD coverage**: For each `P-*` ID anchor in PRODUCT.md, verify it appears somewhere in ENGINEERING.md.
+6. **Forward references** (detached only): For each `→` line in ENGINEERING.md, extract `` `file:symbol` `` pairs and verify the file exists and contains the symbol in the resolved target directory.
+7. **Open questions**: Scan all docs for unresolved `**OPEN-**` patterns (skip struck-through and backtick-quoted).
+
+Structural errors are definitive — report them directly.
 
 ### Step 2: Semantic analysis (skill-only)
 

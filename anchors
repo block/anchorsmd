@@ -193,7 +193,7 @@ check_prefix_unique() {
   fi
 }
 
-# E-ANCHORS-VERSION-COMPARE: parse semver and compare two versions
+# E-ANCHORS-IDEMPOTENT-OPS: parse semver and compare two versions
 parse_version() {
   local ver="${1%%-*}"  # Strip pre-release suffix (e.g., -dev, -rc1)
   IFS='.' read -r _ver_major _ver_minor _ver_patch <<< "$ver"
@@ -343,7 +343,11 @@ TEMPLATE
   # ENGINEERING.md (also check for legacy ERD.md)
   local eng_file="${target_path}/ENGINEERING.md"
   if { [ -f "${eng_file}" ] || [ -f "${target_path}/ERD.md" ]; } && $skip_existing; then
-    echo "Skipping existing ${eng_file}"
+    if [ -f "${eng_file}" ]; then
+      echo "Skipping existing ${eng_file}"
+    else
+      echo "Skipping — legacy ${target_path}/ERD.md exists (run 'anchors upgrade' to migrate)"
+    fi
   else
     cat > "${eng_file}" << 'TEMPLATE'
 ---
@@ -365,6 +369,11 @@ see-also:
 ## Resolved Questions
 TEMPLATE
     created=$((created + 1))
+    # Clean up legacy ERD.md when overwriting with ENGINEERING.md
+    if [ -f "${target_path}/ERD.md" ]; then
+      rm "${target_path}/ERD.md"
+      echo "Removed legacy ${target_path}/ERD.md"
+    fi
   fi
 
   # TESTING.md
@@ -454,7 +463,7 @@ cmd_check() {
 
   echo "## ANCHORS Check Report"
   echo ""
-  echo "### Module"
+  echo "### Modules"
 
   for i in "${!modules[@]}"; do
     local dir="${module_dirs[$i]}"
@@ -670,7 +679,7 @@ cmd_upgrade() {
     return 1
   fi
 
-  # E-ANCHORS-VERSION-COMPARE: compare installed and bundled versions
+  # E-ANCHORS-IDEMPOTENT-OPS: compare installed and bundled versions
   local installed_version=""
   local bundled_version=""
 
@@ -681,7 +690,9 @@ cmd_upgrade() {
     bundled_version="$(tr -d '[:space:]' < "${SKILL_SOURCE}/VERSION")"
   fi
 
-  if ! $force && [ -n "${installed_version}" ] && [ -n "${bundled_version}" ]; then
+  # Dev versions (0.0.0-dev) always proceed — content may have changed without a version bump
+  local installed_base="${installed_version%%-*}"
+  if ! $force && [ -n "${installed_version}" ] && [ -n "${bundled_version}" ] && [ "${installed_base}" != "0.0.0" ]; then
     local cmp
     cmp="$(version_compare "${installed_version}" "${bundled_version}")"
     case "${cmp}" in
@@ -716,7 +727,9 @@ cmd_upgrade() {
     ai-rules generate
   fi
 
-  # Migrate ERD.md → ENGINEERING.md in all ANCHORS modules
+  # Migrate ERD.md → ENGINEERING.md in all ANCHORS modules (from repo root)
+  local repo_root
+  repo_root="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")"
   while IFS= read -r anchors_file; do
     local mdir
     mdir="$(dirname "${anchors_file}")"
@@ -733,13 +746,13 @@ cmd_upgrade() {
     elif [ -f "${mdir}/ERD.md" ] && [ -f "${mdir}/ENGINEERING.md" ]; then
       echo "Warning: ${mdir} has both ERD.md and ENGINEERING.md — skipping migration (resolve manually)"
     fi
-  done < <(find . -name ANCHORS.md -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/vendor/*' 2>/dev/null)
+  done < <(find "${repo_root}" -name ANCHORS.md -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/vendor/*' 2>/dev/null)
 
-  # Update ANCHORS section in agent instructions files (portable sed)
-  for instrfile in AGENTS.md CLAUDE.md; do
+  # Update references in agent instructions files (portable sed)
+  for instrfile in "${repo_root}/AGENTS.md" "${repo_root}/CLAUDE.md"; do
     if [ -f "${instrfile}" ] && [ ! -L "${instrfile}" ]; then
       local tmpfile="${instrfile}.anchors_tmp"
-      sed 's/\*\*ERD\.md\*\*/\*\*ENGINEERING.md\*\*/g' "${instrfile}" > "${tmpfile}" && mv "${tmpfile}" "${instrfile}"
+      sed 's/ERD\.md/ENGINEERING.md/g' "${instrfile}" > "${tmpfile}" && mv "${tmpfile}" "${instrfile}"
     fi
   done
 }
