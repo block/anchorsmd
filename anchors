@@ -193,7 +193,7 @@ check_prefix_unique() {
   fi
 }
 
-# E-ANCHORS-VERSION-COMPARE: parse semver and compare two versions
+# E-ANCHORS-IDEMPOTENT-OPS: parse semver and compare two versions
 parse_version() {
   local ver="${1%%-*}"  # Strip pre-release suffix (e.g., -dev, -rc1)
   IFS='.' read -r _ver_major _ver_minor _ver_patch <<< "$ver"
@@ -369,6 +369,11 @@ see-also:
 ## Resolved Questions
 TEMPLATE
     created=$((created + 1))
+    # Clean up legacy ERD.md when overwriting with ENGINEERING.md
+    if [ -f "${target_path}/ERD.md" ]; then
+      rm "${target_path}/ERD.md"
+      echo "Removed legacy ${target_path}/ERD.md"
+    fi
   fi
 
   # TESTING.md
@@ -674,7 +679,7 @@ cmd_upgrade() {
     return 1
   fi
 
-  # E-ANCHORS-VERSION-COMPARE: compare installed and bundled versions
+  # E-ANCHORS-IDEMPOTENT-OPS: compare installed and bundled versions
   local installed_version=""
   local bundled_version=""
 

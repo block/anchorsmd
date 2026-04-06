@@ -66,10 +66,10 @@ assert_grep "Upgrade removes existing skill" 'rm -rf' "$CLI"
 assert_grep "Upgrade copies new skill" 'cp -R' "$CLI"
 assert_grep "Upgrade has --force flag" '\-\-force' "$CLI"
 
-echo "  [10b] E-ANCHORS-VERSION-FILE: VERSION file exists in skill directory"
+echo "  [10b] E-ANCHORS-IDEMPOTENT-OPS: VERSION file exists in skill directory"
 assert_file_exists "skill/VERSION exists" "$REPO_ROOT/skill/VERSION"
 
-echo "  [10c] E-ANCHORS-VERSION-COMPARE: Version comparison in CLI"
+echo "  [10c] E-ANCHORS-IDEMPOTENT-OPS: Version comparison in CLI"
 assert_grep "CLI has version_compare function" 'version_compare' "$CLI"
 assert_grep "CLI reads installed VERSION" 'target_dir.*VERSION' "$CLI"
 assert_grep "CLI reads bundled VERSION" 'SKILL_SOURCE.*VERSION' "$CLI"
